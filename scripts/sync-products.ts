@@ -848,7 +848,9 @@ async function main(): Promise<void> {
   }
 
   // Step 2: Export model data (batched to avoid Cloudflare timeouts)
-  const exportData = await exportModels(changeReport.changedModelIds);
+  // When --force is set, export ALL eligible models (not just changed ones)
+  const modelIdsToExport = FLAG_FORCE ? [] : changeReport.changedModelIds;
+  const exportData = await exportModels(modelIdsToExport);
 
   // Step 3: Transform to frontend shape
   // Images are served by the backend API (not downloaded locally)
