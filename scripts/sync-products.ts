@@ -397,12 +397,32 @@ async function checkChanges(): Promise<ShowcaseChangeReport> {
 
 const EXPORT_BATCH_SIZE = 200;
 
+async function fetchAllModelIds(): Promise<string[]> {
+  const response = await fetchWithRetry(
+    apiUrl('/export/model-ids'),
+    { headers: authHeaders() },
+  );
+  const data = (await response.json()) as { model_ids: string[]; total: number };
+  log(`Backend reports ${data.total} showcase-eligible models`);
+  return data.model_ids;
+}
+
 async function exportModels(changedModelIds: string[]): Promise<ShowcaseExportResponse> {
   log('Exporting model data...');
 
+  // For full exports (no specific IDs), fetch all IDs first so we can batch
+  if (changedModelIds.length === 0) {
+    const allIds = await fetchAllModelIds();
+    if (allIds.length <= EXPORT_BATCH_SIZE) {
+      return exportModelsSingle(allIds);
+    }
+    // Re-enter with all IDs to use batching logic
+    return exportModels(allIds);
+  }
+
   // For small exports (< batch size), do a single request
   if (changedModelIds.length <= EXPORT_BATCH_SIZE) {
-    return exportModelsSingle(changedModelIds.length > 0 ? changedModelIds : undefined);
+    return exportModelsSingle(changedModelIds);
   }
 
   // For large exports, batch by model IDs to avoid Cloudflare timeouts
