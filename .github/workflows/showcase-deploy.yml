@@ -84,7 +84,7 @@ jobs:
           rm -rf public/images/thumbs public/images/full
           echo "Removed individual images (sprites contain all image data)"
           SPRITE_COUNT=$(find public/images/sprites -name '*.webp' 2>/dev/null | wc -l)
-          echo "Sprite files remaining: $SPRITE_COUNT"
+          echo "Sprite files: $SPRITE_COUNT (brand-grouped)"
 
       - name: Check if data was synced
         id: check-data
@@ -102,6 +102,16 @@ jobs:
       - name: Build showcase
         if: steps.check-data.outputs.has_data == 'true'
         run: npm run build
+
+      - name: Verify file count under Cloudflare limit
+        if: steps.check-data.outputs.has_data == 'true'
+        run: |
+          FILE_COUNT=$(find out -type f | wc -l)
+          echo "Total files in out/: $FILE_COUNT"
+          if [ "$FILE_COUNT" -gt 19500 ]; then
+            echo "::error::File count ($FILE_COUNT) approaching Cloudflare Pages 20K limit!"
+            exit 1
+          fi
 
       - name: Deploy to Cloudflare Pages
         if: steps.check-data.outputs.has_data == 'true'

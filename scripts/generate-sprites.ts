@@ -1,8 +1,12 @@
 /**
  * Sprite generation for showcase images.
  *
- * Combines per-model images into sprite sheets using sharp.composite().
- * Two sprites per model: thumbs (64px cells) and full (400px cells).
+ * Combines images into BRAND-level sprite sheets using sharp.composite().
+ * Both thumb (64px) and full (400px) sprites use the same grid layout (10 cols),
+ * so one position map works for both. Large brands are chunked to stay within
+ * WebP dimension limits (16383px).
+ *
+ * Result: ~200-300 sprite files instead of ~11,000 per-model files.
  */
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
@@ -14,56 +18,53 @@ import * as path from 'path';
 
 export const THUMB_CELL = 64;
 export const FULL_CELL = 400;
-export const FULL_MAX_COLS = 10; // max 4000px wide
-export const THUMB_MAX_COLS = 200; // max 12800px wide (WebP limit: 16383px)
+export const SPRITE_COLS = 10; // Both thumb and full use 10 columns
 export const WEBP_QUALITY = 82;
 const WEBP_MAX_DIMENSION = 16383;
+const MAX_ROWS_FULL = Math.floor(WEBP_MAX_DIMENSION / FULL_CELL); // 40
+const MAX_IMAGES_PER_CHUNK = SPRITE_COLS * MAX_ROWS_FULL; // 400
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 interface ImageEntry {
-  /** Image key "ean-seq" */
   key: string;
-  /** Source file path on disk */
   sourcePath: string;
 }
 
 interface SpriteResult {
-  /** Relative path from public/ for use in URLs */
   relativePath: string;
-  /** Number of columns */
   cols: number;
-  /** Map of image key → [col, row] */
+  rows: number;
   positions: Record<string, [number, number]>;
 }
 
-export interface ModelSpriteData {
+export interface BrandSpriteModel {
   slug: string;
-  thumbSprite: SpriteResult;
-  fullSprite: SpriteResult;
+  brandSlug: string;
+  colorGroups: Array<{
+    images: Array<{ ean: string; sequenceNumber: number }>;
+  }>;
 }
 
 // ---------------------------------------------------------------------------
-// Sprite generation
+// Core sprite compositing
 // ---------------------------------------------------------------------------
 
 async function generateSingleSprite(
   entries: ImageEntry[],
   outputPath: string,
   cellSize: number,
-  maxCols: number,
 ): Promise<SpriteResult> {
   if (entries.length === 0) {
     throw new Error('Cannot generate sprite with zero entries');
   }
 
-  const cols = Math.min(entries.length, maxCols);
+  const cols = Math.min(entries.length, SPRITE_COLS);
   const maxRows = Math.floor(WEBP_MAX_DIMENSION / cellSize);
   const maxImages = cols * maxRows;
 
-  // Truncate entries if they would exceed WebP dimension limits
   if (entries.length > maxImages) {
     entries = entries.slice(0, maxImages);
   }
@@ -72,7 +73,6 @@ async function generateSingleSprite(
   const totalWidth = cols * cellSize;
   const totalHeight = rows * cellSize;
 
-  // Read and resize all source images in parallel
   const composites: sharp.OverlayOptions[] = await Promise.all(
     entries.map(async (entry, i) => {
       const col = i % cols;
@@ -88,7 +88,6 @@ async function generateSingleSprite(
           .webp({ quality: WEBP_QUALITY })
           .toBuffer();
       } catch {
-        // Create placeholder for missing/corrupt images
         input = await sharp({
           create: {
             width: cellSize,
@@ -109,7 +108,6 @@ async function generateSingleSprite(
     }),
   );
 
-  // Create canvas and composite all images
   await sharp({
     create: {
       width: totalWidth,
@@ -122,7 +120,6 @@ async function generateSingleSprite(
     .webp({ quality: WEBP_QUALITY })
     .toFile(outputPath);
 
-  // Build position map
   const positions: Record<string, [number, number]> = {};
   entries.forEach((entry, i) => {
     positions[entry.key] = [i % cols, Math.floor(i / cols)];
@@ -131,56 +128,30 @@ async function generateSingleSprite(
   return {
     relativePath: outputPath,
     cols,
+    rows,
     positions,
   };
 }
 
-/**
- * Generate thumb + full sprites for a single model.
- */
-export async function generateModelSprites(
-  slug: string,
-  imageKeys: string[],
-  thumbsDir: string,
-  fullDir: string | null,
-  outputDir: string,
-): Promise<ModelSpriteData> {
-  const thumbOutDir = path.join(outputDir, 't');
-  const fullOutDir = path.join(outputDir, 'f');
-  await fs.mkdir(thumbOutDir, { recursive: true });
-  await fs.mkdir(fullOutDir, { recursive: true });
+// ---------------------------------------------------------------------------
+// Brand-level sprite generation
+// ---------------------------------------------------------------------------
 
-  const thumbEntries: ImageEntry[] = imageKeys.map((key) => ({
-    key,
-    sourcePath: path.join(thumbsDir, `${key}.webp`),
-  }));
-
-  const fullEntries: ImageEntry[] = imageKeys.map((key) => ({
-    key,
-    sourcePath: fullDir
-      ? path.join(fullDir, `${key}.webp`)
-      : path.join(thumbsDir, `${key}.webp`),
-  }));
-
-  const thumbOutputPath = path.join(thumbOutDir, `${slug}.webp`);
-  const fullOutputPath = path.join(fullOutDir, `${slug}.webp`);
-
-  const [thumbSprite, fullSprite] = await Promise.all([
-    generateSingleSprite(thumbEntries, thumbOutputPath, THUMB_CELL, THUMB_MAX_COLS),
-    generateSingleSprite(fullEntries, fullOutputPath, FULL_CELL, FULL_MAX_COLS),
-  ]);
-
-  thumbSprite.relativePath = `/images/sprites/t/${slug}.webp`;
-  fullSprite.relativePath = `/images/sprites/f/${slug}.webp`;
-
-  return { slug, thumbSprite, fullSprite };
+interface ModelKeyRange {
+  slug: string;
+  keys: string[];
+  startIdx: number;
 }
 
 /**
- * Generate sprites for all models and write the sprite map JSON.
+ * Generate brand-grouped sprites for all models.
+ *
+ * Groups all models by brandSlug, then generates paired thumb+full sprite
+ * chunks per brand. Both use the same 10-column grid layout so positions
+ * are shared. Large brands are chunked at model boundaries (max 400 images).
  */
-export async function generateAllSprites(
-  models: Array<{ slug: string; colorGroups: Array<{ images: Array<{ ean: string; sequenceNumber: number }> }> }>,
+export async function generateBrandSprites(
+  models: BrandSpriteModel[],
   thumbsDir: string,
   fullDir: string | null,
   spritesDir: string,
@@ -191,132 +162,10 @@ export async function generateAllSprites(
   await fs.mkdir(path.join(spritesDir, 't'), { recursive: true });
   await fs.mkdir(path.join(spritesDir, 'f'), { recursive: true });
 
-  const spriteMap: {
-    thumbCell: number;
-    fullCell: number;
-    fullCols: number;
-    imageBase: string;
-    models: Record<string, {
-      t: string;
-      f: string;
-      cols: number;
-      img: Record<string, [number, number]>;
-    }>;
-  } = {
-    thumbCell: THUMB_CELL,
-    fullCell: FULL_CELL,
-    fullCols: FULL_MAX_COLS,
-    imageBase: imageBaseUrl,
-    models: {},
-  };
+  // Step 1: Collect image keys per model, grouped by brand
+  const brandModels = new Map<string, Array<{ slug: string; imageKeys: string[] }>>();
 
-  let processed = 0;
-  const total = models.length;
-  const BATCH_SIZE = 25;
-
-  for (let i = 0; i < models.length; i += BATCH_SIZE) {
-    const batch = models.slice(i, i + BATCH_SIZE);
-
-    const results = await Promise.all(
-      batch.map(async (model) => {
-        const imageKeys: string[] = [];
-        const seen = new Set<string>();
-        for (const cg of model.colorGroups) {
-          for (const img of cg.images) {
-            const key = `${img.ean}-${img.sequenceNumber}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              imageKeys.push(key);
-            }
-          }
-        }
-
-        if (imageKeys.length === 0) return null;
-
-        try {
-          return await generateModelSprites(model.slug, imageKeys, thumbsDir, fullDir, spritesDir);
-        } catch (err) {
-          logFn(`  WARNING: Sprite generation failed for ${model.slug} (${imageKeys.length} images): ${err}`);
-          return null;
-        }
-      }),
-    );
-
-    for (const result of results) {
-      if (!result) continue;
-      spriteMap.models[result.slug] = {
-        t: result.thumbSprite.relativePath,
-        f: result.fullSprite.relativePath,
-        cols: result.fullSprite.cols,
-        img: result.fullSprite.positions,
-      };
-    }
-
-    processed += batch.length;
-    if (processed % 100 === 0 || processed === total) {
-      logFn(`  Sprites: ${processed}/${total} models processed`);
-    }
-  }
-
-  await fs.mkdir(path.dirname(spriteMapPath), { recursive: true });
-  await fs.writeFile(spriteMapPath, JSON.stringify(spriteMap), 'utf-8');
-  logFn(`  Written sprite-map.json (${Object.keys(spriteMap.models).length} models)`);
-
-  // Clean stale sprites
-  for (const subdir of ['t', 'f']) {
-    const dir = path.join(spritesDir, subdir);
-    try {
-      const files = await fs.readdir(dir);
-      const validSlugs = new Set(Object.keys(spriteMap.models));
-      for (const file of files) {
-        const slug = file.replace('.webp', '');
-        if (!validSlugs.has(slug)) {
-          await fs.unlink(path.join(dir, file));
-        }
-      }
-    } catch {
-      // directory might not exist yet
-    }
-  }
-}
-
-/**
- * Incrementally update sprites for a subset of changed models.
- * Reads the existing sprite-map.json, regenerates only the changed models,
- * and merges back. Removes entries for models no longer in allModels.
- */
-export async function generateIncrementalSprites(
-  changedModels: Array<{ slug: string; colorGroups: Array<{ images: Array<{ ean: string; sequenceNumber: number }> }> }>,
-  allModels: Array<{ slug: string }>,
-  thumbsDir: string,
-  fullDir: string | null,
-  spritesDir: string,
-  spriteMapPath: string,
-  imageBaseUrl: string,
-  logFn: (msg: string) => void,
-): Promise<void> {
-  // Load existing sprite map
-  let existingSpriteMap: {
-    thumbCell: number;
-    fullCell: number;
-    fullCols: number;
-    imageBase: string;
-    models: Record<string, { t: string; f: string; cols: number; img: Record<string, [number, number]> }>;
-  };
-  try {
-    const raw = await fs.readFile(spriteMapPath, 'utf-8');
-    existingSpriteMap = JSON.parse(raw);
-  } catch {
-    logFn('  No existing sprite-map.json, falling back to full generation');
-    return generateAllSprites(changedModels, thumbsDir, fullDir, spritesDir, spriteMapPath, imageBaseUrl, logFn);
-  }
-
-  await fs.mkdir(path.join(spritesDir, 't'), { recursive: true });
-  await fs.mkdir(path.join(spritesDir, 'f'), { recursive: true });
-
-  // Regenerate sprites only for changed models
-  let processed = 0;
-  for (const model of changedModels) {
+  for (const model of models) {
     const imageKeys: string[] = [];
     const seen = new Set<string>();
     for (const cg of model.colorGroups) {
@@ -328,46 +177,176 @@ export async function generateIncrementalSprites(
         }
       }
     }
-    if (imageKeys.length === 0) {
-      delete existingSpriteMap.models[model.slug];
-      continue;
-    }
+    if (imageKeys.length === 0) continue;
 
-    let result: ModelSpriteData;
-    try {
-      result = await generateModelSprites(model.slug, imageKeys, thumbsDir, fullDir, spritesDir);
-    } catch (err) {
-      logFn(`  WARNING: Sprite generation failed for ${model.slug} (${imageKeys.length} images): ${err}`);
-      continue;
+    if (!brandModels.has(model.brandSlug)) {
+      brandModels.set(model.brandSlug, []);
     }
-    existingSpriteMap.models[model.slug] = {
-      t: result.thumbSprite.relativePath,
-      f: result.fullSprite.relativePath,
-      cols: result.fullSprite.cols,
-      img: result.fullSprite.positions,
-    };
+    brandModels.get(model.brandSlug)!.push({ slug: model.slug, imageKeys });
+  }
 
-    processed++;
-    if (processed % 50 === 0 || processed === changedModels.length) {
-      logFn(`  Sprites (incremental): ${processed}/${changedModels.length} models updated`);
+  // Step 2: Build sprite map
+  const spriteMap: {
+    thumbCell: number;
+    fullCell: number;
+    cols: number;
+    imageBase: string;
+    models: Record<string, {
+      t: string;
+      f: string;
+      cols: number;
+      rows: number;
+      img: Record<string, [number, number]>;
+    }>;
+  } = {
+    thumbCell: THUMB_CELL,
+    fullCell: FULL_CELL,
+    cols: SPRITE_COLS,
+    imageBase: imageBaseUrl,
+    models: {},
+  };
+
+  let brandsProcessed = 0;
+  const totalBrands = brandModels.size;
+  const BRAND_BATCH = 5;
+
+  // Process brands in small batches to control memory
+  const brandEntries = Array.from(brandModels.entries());
+
+  for (let bi = 0; bi < brandEntries.length; bi += BRAND_BATCH) {
+    const batch = brandEntries.slice(bi, bi + BRAND_BATCH);
+
+    await Promise.all(batch.map(async ([brandSlug, modelInfos]) => {
+      // Collect all unique image keys for this brand, preserving model order
+      const allKeys: string[] = [];
+      const globalSeen = new Set<string>();
+      const modelRanges: ModelKeyRange[] = [];
+
+      for (const info of modelInfos) {
+        const modelStart = allKeys.length;
+        const modelKeys: string[] = [];
+        for (const key of info.imageKeys) {
+          if (!globalSeen.has(key)) {
+            globalSeen.add(key);
+            allKeys.push(key);
+            modelKeys.push(key);
+          }
+        }
+        if (modelKeys.length > 0) {
+          modelRanges.push({ slug: info.slug, startIdx: modelStart, keys: modelKeys });
+        }
+      }
+
+      if (allKeys.length === 0) return;
+
+      // Chunk at model boundaries (max MAX_IMAGES_PER_CHUNK per chunk)
+      const chunks: { keys: string[]; startGlobal: number; modelRanges: ModelKeyRange[] }[] = [];
+      let curKeys: string[] = [];
+      let curStart = 0;
+      let curModelRanges: ModelKeyRange[] = [];
+
+      for (const range of modelRanges) {
+        if (curKeys.length > 0 && curKeys.length + range.keys.length > MAX_IMAGES_PER_CHUNK) {
+          chunks.push({ keys: curKeys, startGlobal: curStart, modelRanges: curModelRanges });
+          curStart += curKeys.length;
+          curKeys = [];
+          curModelRanges = [];
+        }
+        // Adjust range startIdx relative to chunk
+        curModelRanges.push({ ...range, startIdx: curKeys.length });
+        curKeys.push(...range.keys);
+      }
+      if (curKeys.length > 0) {
+        chunks.push({ keys: curKeys, startGlobal: curStart, modelRanges: curModelRanges });
+      }
+
+      // Generate paired thumb + full sprites per chunk
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const chunk = chunks[ci];
+        const suffix = chunks.length === 1 ? '' : `-${ci}`;
+
+        const thumbEntries = chunk.keys.map((key) => ({
+          key,
+          sourcePath: path.join(thumbsDir, `${key}.webp`),
+        }));
+        const fullEntries = chunk.keys.map((key) => ({
+          key,
+          sourcePath: fullDir
+            ? path.join(fullDir, `${key}.webp`)
+            : path.join(thumbsDir, `${key}.webp`),
+        }));
+
+        const thumbOutPath = path.join(spritesDir, 't', `${brandSlug}${suffix}.webp`);
+        const fullOutPath = path.join(spritesDir, 'f', `${brandSlug}${suffix}.webp`);
+
+        let thumbResult: SpriteResult;
+        let fullResult: SpriteResult;
+        try {
+          [thumbResult, fullResult] = await Promise.all([
+            generateSingleSprite(thumbEntries, thumbOutPath, THUMB_CELL),
+            generateSingleSprite(fullEntries, fullOutPath, FULL_CELL),
+          ]);
+        } catch (err) {
+          logFn(`  WARNING: Sprite generation failed for brand ${brandSlug} chunk ${ci}: ${err}`);
+          continue;
+        }
+
+        thumbResult.relativePath = `/images/sprites/t/${brandSlug}${suffix}.webp`;
+        fullResult.relativePath = `/images/sprites/f/${brandSlug}${suffix}.webp`;
+
+        // Map model entries — positions from full sprite (same grid as thumb)
+        for (const range of chunk.modelRanges) {
+          const modelImg: Record<string, [number, number]> = {};
+          for (const key of range.keys) {
+            const pos = fullResult.positions[key];
+            if (pos) {
+              modelImg[key] = pos;
+            }
+          }
+          if (Object.keys(modelImg).length === 0) continue;
+
+          spriteMap.models[range.slug] = {
+            t: thumbResult.relativePath,
+            f: fullResult.relativePath,
+            cols: fullResult.cols,
+            rows: fullResult.rows,
+            img: modelImg,
+          };
+        }
+      }
+    }));
+
+    brandsProcessed += batch.length;
+    if (brandsProcessed % 10 === 0 || brandsProcessed >= totalBrands) {
+      logFn(`  Brand sprites: ${brandsProcessed}/${totalBrands} brands processed`);
     }
   }
 
-  // Remove entries for models no longer in the full set
-  const validSlugs = new Set(allModels.map((m) => m.slug));
-  for (const slug of Object.keys(existingSpriteMap.models)) {
-    if (!validSlugs.has(slug)) {
-      delete existingSpriteMap.models[slug];
-      // Clean up sprite files
-      try { await fs.unlink(path.join(spritesDir, 't', `${slug}.webp`)); } catch { /* ok */ }
-      try { await fs.unlink(path.join(spritesDir, 'f', `${slug}.webp`)); } catch { /* ok */ }
-    }
-  }
-
-  // Update imageBase in case it changed
-  existingSpriteMap.imageBase = imageBaseUrl;
-
+  // Write sprite map
   await fs.mkdir(path.dirname(spriteMapPath), { recursive: true });
-  await fs.writeFile(spriteMapPath, JSON.stringify(existingSpriteMap), 'utf-8');
-  logFn(`  Written sprite-map.json (${Object.keys(existingSpriteMap.models).length} models, ${processed} updated)`);
+  await fs.writeFile(spriteMapPath, JSON.stringify(spriteMap), 'utf-8');
+  logFn(`  Written sprite-map.json (${Object.keys(spriteMap.models).length} models across ${totalBrands} brands)`);
+
+  // Clean stale sprite files
+  const validSpriteFiles = new Set<string>();
+  for (const entry of Object.values(spriteMap.models)) {
+    const tFile = entry.t.split('/').pop();
+    const fFile = entry.f.split('/').pop();
+    if (tFile) validSpriteFiles.add(tFile);
+    if (fFile) validSpriteFiles.add(fFile);
+  }
+
+  for (const subdir of ['t', 'f']) {
+    const dir = path.join(spritesDir, subdir);
+    try {
+      const files = await fs.readdir(dir);
+      for (const file of files) {
+        if (file.endsWith('.webp') && !validSpriteFiles.has(file)) {
+          await fs.unlink(path.join(dir, file));
+        }
+      }
+    } catch {
+      // directory might not exist yet
+    }
+  }
 }

@@ -20,7 +20,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import MiniSearch from 'minisearch';
-import { generateAllSprites, generateIncrementalSprites } from './generate-sprites';
+import { generateBrandSprites } from './generate-sprites';
+import type { BrandSpriteModel } from './generate-sprites';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -909,7 +910,7 @@ async function main(): Promise<void> {
     allModels = exportedModels;
   }
 
-  // Step 4: Sprite generation (smart skip + incremental)
+  // Step 4: Brand-grouped sprite generation
   const spriteMapExists = await fs.access(SPRITE_MAP_PATH).then(() => true).catch(() => false);
   const c = changeReport.changes;
   const needsSpriteRegen = FLAG_FORCE
@@ -924,41 +925,28 @@ async function main(): Promise<void> {
   if (!needsSpriteRegen) {
     // Data-only sync: skip image downloads + sprite generation entirely
     log('No image changes detected — reusing existing sprites (skipping download + generation)');
-  } else if (isIncremental && spriteMapExists) {
-    // Incremental sprite regen: only process changed models
-    const changedModelSet = new Set(changeReport.changedModelIds);
-    const changedModels = allModels.filter((m) => changedModelSet.has(m.id));
-    log(`Incremental sprite update: ${changedModels.length} models with image changes`);
+  } else {
+    // Download all images needed for sprites
+    const imageTargets = isIncremental && spriteMapExists
+      ? collectAllImageTargets(allModels.filter((m) => new Set(changeReport.changedModelIds).has(m.id)))
+      : allImageTargets;
 
-    // Download images only for changed models
-    const changedImageTargets = collectAllImageTargets(changedModels);
-    if (changedImageTargets.length > 0) {
-      log(`Downloading ${changedImageTargets.length} images for changed models...`);
-      await downloadImages(changedImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-      await downloadImages(changedImageTargets, FULL_DIR, 'full', 'Full');
+    if (imageTargets.length > 0) {
+      log(`Downloading ${imageTargets.length} images (thumbs + full)...`);
+      await downloadImages(imageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
+      await downloadImages(imageTargets, FULL_DIR, 'full', 'Full');
     }
 
-    // Incrementally update sprite-map.json and regenerate only changed sprites
-    await generateIncrementalSprites(
-      changedModels,
-      allModels,
-      THUMBS_DIR,
-      FULL_DIR,
-      SPRITES_DIR,
-      SPRITE_MAP_PATH,
-      IMAGE_BASE_URL,
-      log,
-    );
-    log(`Sprites: ${changedModels.length * 2} sprite files updated (incremental)`);
-  } else {
-    // Full sprite regen: download all images + generate all sprites
-    log(`Full sprite generation for ${allModels.length} models...`);
-    log(`Downloading ${allImageTargets.length} images (thumbs + full)...`);
-    await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-    await downloadImages(allImageTargets, FULL_DIR, 'full', 'Full');
+    // Generate brand-grouped sprites (paired thumb + full per brand chunk)
+    const brandSpriteModels: BrandSpriteModel[] = allModels.map((m) => ({
+      slug: m.slug,
+      brandSlug: m.brandSlug,
+      colorGroups: m.colorGroups,
+    }));
 
-    await generateAllSprites(
-      allModels,
+    log(`Generating brand-grouped sprites for ${allModels.length} models...`);
+    await generateBrandSprites(
+      brandSpriteModels,
       THUMBS_DIR,
       FULL_DIR,
       SPRITES_DIR,
@@ -966,7 +954,6 @@ async function main(): Promise<void> {
       IMAGE_BASE_URL,
       log,
     );
-    log(`Sprites: ${allModels.length * 2} sprite files generated (full rebuild)`);
   }
 
   // Clean up stale individual image files (keep valid ones as download cache)

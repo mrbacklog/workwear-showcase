@@ -176,12 +176,14 @@ export type SpritePosition = [number, number];
 
 /** Sprite data for a single model */
 export interface ModelSpriteEntry {
-  /** Thumb sprite path, e.g. /images/sprites/t/elten-miles.webp */
+  /** Thumb sprite path, e.g. /images/sprites/t/brand-slug.webp */
   t: string;
-  /** Full sprite path, e.g. /images/sprites/f/elten-miles.webp */
+  /** Full sprite path, e.g. /images/sprites/f/brand-slug.webp */
   f: string;
-  /** Number of columns in full sprite (thumbs are always 1 row) */
+  /** Number of columns in sprite grid (same for thumb and full) */
   cols: number;
+  /** Number of rows in sprite grid (same for thumb and full) */
+  rows: number;
   /** Map of "ean-seq" → [col, row] position in sprites */
   img: Record<string, SpritePosition>;
 }
@@ -192,8 +194,8 @@ export interface SpriteMap {
   thumbCell: number;
   /** Full cell size in px (400) */
   fullCell: number;
-  /** Max columns in full sprites before wrapping */
-  fullCols: number;
+  /** Default columns in sprite grid */
+  cols: number;
   /** Backend image base URL for original resolution */
   imageBase: string;
   /** Per-model sprite entries keyed by slug */

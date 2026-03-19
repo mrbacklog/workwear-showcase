@@ -77,17 +77,13 @@ export function useSpriteMap() {
       if (!pos) return null;
 
       const [col, row] = pos;
-      const totalImages = Object.keys(entry.img).length;
-      const fullCols = entry.cols;
-      const fullRows = Math.ceil(totalImages / fullCols);
-      const thumbCols = totalImages; // thumb sprites are single-row horizontal strips
-      const thumbRows = 1;
+      // Brand sprites: thumb and full share the same grid layout (cols × rows)
+      const spriteCols = entry.cols;
+      const spriteRows = entry.rows ?? Math.ceil(Object.keys(entry.img).length / spriteCols);
 
-      // Percentage-based background-position: col/(cols-1)*100% for multi-cell
-      const thumbPosX = thumbCols <= 1 ? '0%' : `${(col / (thumbCols - 1)) * 100}%`;
-      const thumbPosY = '0%';
-      const fullPosX = fullCols <= 1 ? '0%' : `${(col / (fullCols - 1)) * 100}%`;
-      const fullPosY = fullRows <= 1 ? '0%' : `${(row / (fullRows - 1)) * 100}%`;
+      // Percentage-based background-position
+      const posX = spriteCols <= 1 ? '0%' : `${(col / (spriteCols - 1)) * 100}%`;
+      const posY = spriteRows <= 1 ? '0%' : `${(row / (spriteRows - 1)) * 100}%`;
 
       // Parse ean and seq from key "ean-seq"
       const lastDash = imageKey.lastIndexOf('-');
@@ -97,10 +93,10 @@ export function useSpriteMap() {
       return {
         thumbSrc: entry.t,
         fullSrc: entry.f,
-        thumbPos: `${thumbPosX} ${thumbPosY}`,
-        fullPos: `${fullPosX} ${fullPosY}`,
-        thumbSize: `${thumbCols * 100}% ${thumbRows * 100}%`,
-        fullSize: `${fullCols * 100}% ${fullRows * 100}%`,
+        thumbPos: `${posX} ${posY}`,
+        fullPos: `${posX} ${posY}`,
+        thumbSize: `${spriteCols * 100}% ${spriteRows * 100}%`,
+        fullSize: `${spriteCols * 100}% ${spriteRows * 100}%`,
         originalUrl: `${spriteMap.imageBase}/${ean}/${seq}?size=original`,
       };
     },
