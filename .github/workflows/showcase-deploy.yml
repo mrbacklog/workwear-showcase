@@ -1,0 +1,123 @@
+name: Showcase Sync & Deploy
+
+on:
+  # Scheduled: every 4 hours
+  schedule:
+    - cron: '30 */4 * * *'
+
+  # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force full sync (skip change detection)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+  # Trigger via API (repository_dispatch) from backend worker
+  repository_dispatch:
+    types: [showcase-sync]
+
+jobs:
+  sync-and-deploy:
+    name: Sync & Deploy Showcase
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Restore image download cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            public/images/thumbs
+            public/images/full
+          key: showcase-dl-cache-${{ github.run_id }}
+          restore-keys: |
+            showcase-dl-cache-
+
+      - name: Restore sprite & data cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/images/sprites
+            public/data
+          key: showcase-data-${{ github.run_id }}
+          restore-keys: |
+            showcase-data-
+
+      - name: Sync product data from backend
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force || 'false' }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          npx tsx scripts/sync-products.ts $FORCE_FLAG
+        env:
+          BACKEND_URL: https://api.databiz.app
+          AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+
+      - name: Save image download cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            public/images/thumbs
+            public/images/full
+          key: showcase-dl-cache-${{ github.run_id }}
+
+      - name: Remove individual images before build
+        run: |
+          rm -rf public/images/thumbs public/images/full
+          echo "Removed individual images (sprites contain all image data)"
+          SPRITE_COUNT=$(find public/images/sprites -name '*.webp' 2>/dev/null | wc -l)
+          echo "Sprite files remaining: $SPRITE_COUNT"
+
+      - name: Check if data was synced
+        id: check-data
+        run: |
+          if [ -f "public/data/model-cards-meta.json" ]; then
+            MODEL_COUNT=$(node -e "const d=require('./public/data/model-cards-meta.json'); console.log(d.totalModels)")
+            echo "models=$MODEL_COUNT" >> $GITHUB_OUTPUT
+            echo "has_data=true" >> $GITHUB_OUTPUT
+            echo "Synced $MODEL_COUNT models"
+          else
+            echo "has_data=false" >> $GITHUB_OUTPUT
+            echo "No data synced - skipping deploy"
+          fi
+
+      - name: Build showcase
+        if: steps.check-data.outputs.has_data == 'true'
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.check-data.outputs.has_data == 'true'
+        run: npx wrangler pages deploy out --project-name=workwear-showcase --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Showcase Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-data.outputs.has_data }}" = "true" ]; then
+            echo "- Models synced: **${{ steps.check-data.outputs.models }}**" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: Deployed to Cloudflare Pages" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Status: No changes detected, deploy skipped" >> $GITHUB_STEP_SUMMARY
+          fi

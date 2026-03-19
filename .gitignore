@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# generated data (rebuilt by sync script)
+public/data/
+public/images/thumbs/
+public/images/sprites/
+public/images/full/
+
+# misc
+*.tsbuildinfo
+next-env.d.ts
+.env*.local
