@@ -21,25 +21,11 @@ export function BrandFilter({ brands, selectedSlugs, onToggle }: BrandFilterProp
   const sortedBrands = useMemo(() => {
     const needle = search.trim().toLowerCase();
 
-    // Filter by search query when active
-    const filtered = needle
+    // Filter by search query when active, preserve original alphabetical order
+    return needle
       ? brands.filter((b) => b.name.toLowerCase().includes(needle))
       : brands;
-
-    // Split into selected and unselected, each group already alphabetical (input is sorted)
-    const selected: BrandInfo[] = [];
-    const unselected: BrandInfo[] = [];
-
-    for (const brand of filtered) {
-      if (selectedSlugs.has(brand.slug)) {
-        selected.push(brand);
-      } else {
-        unselected.push(brand);
-      }
-    }
-
-    return [...selected, ...unselected];
-  }, [brands, selectedSlugs, search]);
+  }, [brands, search]);
 
   const showSearch = brands.length > SEARCH_THRESHOLD;
   const showToggle = !isSearching && sortedBrands.length > COLLAPSED_LIMIT;
