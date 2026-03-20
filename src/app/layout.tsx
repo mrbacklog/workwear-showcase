@@ -20,7 +20,8 @@ export default function RootLayout({
   return (
     <html lang="nl">
       <head>
-        <link rel="preload" href="/data/search-index.json" as="fetch" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://api.databiz.app" />
+        <link rel="prefetch" href="/data/search-index.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/model-cards-meta.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/category-tree.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/sprite-map.json" as="fetch" crossOrigin="anonymous" />

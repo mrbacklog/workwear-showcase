@@ -37,6 +37,22 @@ export interface ShowcaseVariant {
 
 export type ImageType = 'front' | 'back' | 'side' | 'detail' | 'lifestyle';
 
+/** Embedded sprite coordinates, written into model-cards during sync */
+export interface EmbeddedSpriteInfo {
+  /** Thumb sprite URL, e.g. /images/sprites/t/engel-workwear.webp */
+  thumbSrc: string;
+  /** Full sprite URL, e.g. /images/sprites/f/engel-workwear.webp */
+  fullSrc: string;
+  /** Grid column of this image in the sprite sheet (0-based) */
+  col: number;
+  /** Grid row of this image in the sprite sheet (0-based) */
+  row: number;
+  /** Total columns in the sprite sheet */
+  cols: number;
+  /** Total rows in the sprite sheet */
+  rows: number;
+}
+
 export interface ShowcaseImage {
   /** EAN of the variant this image belongs to */
   ean: string;
@@ -48,6 +64,8 @@ export interface ShowcaseImage {
   path: string;
   /** Thumbnail path, e.g. /images/products/thumbs/8712345678901-1.webp */
   thumbPath: string;
+  /** Embedded sprite coordinates, present when synced with sprite info */
+  sprite?: EmbeddedSpriteInfo;
 }
 
 // ---------------------------------------------------------------------------

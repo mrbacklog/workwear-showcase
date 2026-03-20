@@ -128,6 +128,16 @@ interface ShowcaseChangeReport {
 }
 
 // Frontend model shape (camelCase, with image paths)
+
+interface FrontendImageSprite {
+  thumbSrc: string;
+  fullSrc: string;
+  col: number;
+  row: number;
+  cols: number;
+  rows: number;
+}
+
 interface FrontendColorGroup {
   colorRaw: string;
   colorCode: string;
@@ -147,6 +157,7 @@ interface FrontendColorGroup {
     imageType: string;
     path: string;
     thumbPath: string;
+    sprite?: FrontendImageSprite;
   }[];
 }
 
@@ -533,6 +544,66 @@ function transformModel(model: ShowcaseModel): FrontendModel {
 }
 
 // ---------------------------------------------------------------------------
+// Sprite embedding: inline sprite coordinates into model-cards
+// ---------------------------------------------------------------------------
+
+interface SpriteMapEntry {
+  t: string;
+  f: string;
+  cols: number;
+  rows: number;
+  img: Record<string, [number, number]>;
+}
+
+interface SpriteMapFile {
+  thumbCell: number;
+  fullCell: number;
+  cols: number;
+  imageBase: string;
+  models: Record<string, SpriteMapEntry>;
+}
+
+/**
+ * Embed sprite coordinates from sprite-map.json directly into each image
+ * within the model-cards. This eliminates the need to load sprite-map.json
+ * at runtime for images that have been embedded.
+ */
+function embedSpriteInfoIntoModels(
+  models: FrontendModel[],
+  spriteMap: SpriteMapFile,
+): FrontendModel[] {
+  return models.map((model) => {
+    const spriteEntry = spriteMap.models[model.slug];
+    if (!spriteEntry) return model;
+
+    return {
+      ...model,
+      colorGroups: model.colorGroups.map((cg) => ({
+        ...cg,
+        images: cg.images.map((img) => {
+          const imageKey = img.path; // path = "ean-seq" sprite key
+          const pos = spriteEntry.img[imageKey];
+          if (!pos) return img;
+
+          const [col, row] = pos;
+          return {
+            ...img,
+            sprite: {
+              thumbSrc: spriteEntry.t,
+              fullSrc: spriteEntry.f,
+              col,
+              row,
+              cols: spriteEntry.cols,
+              rows: spriteEntry.rows,
+            },
+          };
+        }),
+      })),
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Step 5: Build search index
 // ---------------------------------------------------------------------------
 
@@ -641,8 +712,45 @@ function buildSearchIndex(models: FrontendModel[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Category-based chunk helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a lookup map: leaf category code → L1 root category code.
+ * Traverses the category tree recursively.
+ */
+function buildCategoryL1Map(
+  nodes: FrontendCategory[],
+  l1Code: string | null = null,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const node of nodes) {
+    const currentL1 = l1Code ?? node.code;
+    map.set(node.code, currentL1);
+    for (const [k, v] of buildCategoryL1Map(node.children, currentL1)) {
+      map.set(k, v);
+    }
+  }
+  return map;
+}
+
+/**
+ * Derive a filesystem-safe chunk key from an L1 category code.
+ * E.g. "ALG-KLEDING" → "cat-alg-kleding"
+ */
+function l1CodeToChunkKey(code: string): string {
+  return `cat-${code.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+}
+
+// ---------------------------------------------------------------------------
 // Step 6: Write output files
 // ---------------------------------------------------------------------------
+
+interface CategoryChunkEntry {
+  file: string;
+  modelCount: number;
+  categoryName: string;
+}
 
 async function writeDataFiles(
   models: FrontendModel[],
@@ -653,51 +761,104 @@ async function writeDataFiles(
 ): Promise<void> {
   await ensureDir(DATA_DIR);
 
-  // model-cards: split into chunks to stay under Cloudflare 25MB limit
-  const MAX_CHUNK_SIZE = 15 * 1024 * 1024; // 15MB per chunk (safe margin under CF 25MB limit)
-  const fullJson = JSON.stringify(models);
+  // Build category → L1 lookup
+  const categoryL1Map = buildCategoryL1Map(categoryTree);
 
-  if (fullJson.length <= MAX_CHUNK_SIZE) {
-    // Single file is fine
-    const modelCardsPath = path.join(DATA_DIR, 'model-cards-0.json');
-    await fs.writeFile(modelCardsPath, fullJson, 'utf-8');
-    const metaPath = path.join(DATA_DIR, 'model-cards-meta.json');
-    await fs.writeFile(metaPath, JSON.stringify({ chunks: 1, totalModels: models.length }), 'utf-8');
-    log(`Written ${modelCardsPath} (${models.length} models, single chunk)`);
-  } else {
-    // Split into chunks
-    const modelsPerChunk = Math.ceil(models.length / Math.ceil(fullJson.length / MAX_CHUNK_SIZE));
-    const chunks: FrontendModel[][] = [];
-    for (let i = 0; i < models.length; i += modelsPerChunk) {
-      chunks.push(models.slice(i, i + modelsPerChunk));
-    }
-
-    for (let i = 0; i < chunks.length; i++) {
-      const chunkPath = path.join(DATA_DIR, `model-cards-${i}.json`);
-      await fs.writeFile(chunkPath, JSON.stringify(chunks[i]), 'utf-8');
-      const sizeMB = (JSON.stringify(chunks[i]).length / 1024 / 1024).toFixed(1);
-      log(`Written ${chunkPath} (${chunks[i].length} models, ${sizeMB} MB)`);
-    }
-
-    const metaPath = path.join(DATA_DIR, 'model-cards-meta.json');
-    await fs.writeFile(metaPath, JSON.stringify({ chunks: chunks.length, totalModels: models.length }), 'utf-8');
-    log(`Split model-cards into ${chunks.length} chunks`);
+  // Build L1 code → category name lookup
+  const l1NameMap = new Map<string, string>();
+  for (const node of categoryTree) {
+    l1NameMap.set(node.code, node.nameNl);
   }
 
-  // Remove old chunk files and legacy single file
-  const chunkCount = fullJson.length <= MAX_CHUNK_SIZE ? 1 : Math.ceil(models.length / Math.ceil(fullJson.length / MAX_CHUNK_SIZE));
-  for (let i = chunkCount; i < 20; i++) {
+  // Group models by L1 category
+  const buckets = new Map<string, FrontendModel[]>(); // key = chunk key, value = models
+
+  for (const model of models) {
+    let chunkKey: string;
+    if (model.categoryCode) {
+      const l1Code = categoryL1Map.get(model.categoryCode);
+      chunkKey = l1Code ? l1CodeToChunkKey(l1Code) : 'cat-uncategorized';
+    } else {
+      chunkKey = 'cat-uncategorized';
+    }
+    const bucket = buckets.get(chunkKey);
+    if (bucket) {
+      bucket.push(model);
+    } else {
+      buckets.set(chunkKey, [model]);
+    }
+  }
+
+  // Write each category chunk and build meta
+  const chunksMeta: Record<string, CategoryChunkEntry> = {};
+
+  for (const [chunkKey, chunkModels] of buckets.entries()) {
+    const fileName = `model-cards-${chunkKey}.json`;
+    const filePath = path.join(DATA_DIR, fileName);
+    await fs.writeFile(filePath, JSON.stringify(chunkModels), 'utf-8');
+    const sizeMB = (Buffer.byteLength(JSON.stringify(chunkModels), 'utf-8') / 1024 / 1024).toFixed(1);
+
+    // Determine category name
+    let categoryName = chunkKey;
+    if (chunkKey !== 'cat-uncategorized') {
+      // Reverse lookup: find the L1 code from the chunk key
+      for (const [l1Code, name] of l1NameMap.entries()) {
+        if (l1CodeToChunkKey(l1Code) === chunkKey) {
+          categoryName = name;
+          break;
+        }
+      }
+    } else {
+      categoryName = 'Uncategorized';
+    }
+
+    chunksMeta[chunkKey] = {
+      file: fileName,
+      modelCount: chunkModels.length,
+      categoryName,
+    };
+
+    log(`Written ${fileName} (${chunkModels.length} models, ${sizeMB} MB, category: ${categoryName})`);
+  }
+
+  // Write new-format meta
+  const meta = {
+    totalModels: models.length,
+    chunks: chunksMeta,
+  };
+  const metaPath = path.join(DATA_DIR, 'model-cards-meta.json');
+  await fs.writeFile(metaPath, JSON.stringify(meta), 'utf-8');
+  log(`Written model-cards-meta.json (${buckets.size} category chunks, ${models.length} models)`);
+
+  // Remove legacy numeric chunk files (model-cards-0.json, model-cards-1.json, ...)
+  for (let i = 0; i < 20; i++) {
     try {
       await fs.unlink(path.join(DATA_DIR, `model-cards-${i}.json`));
-      log(`Removed stale chunk: model-cards-${i}.json`);
+      log(`Removed legacy chunk: model-cards-${i}.json`);
     } catch {
-      break; // No more old chunks
+      // File doesn't exist, stop trying
+      break;
     }
   }
+  // Remove legacy single file
   try {
     await fs.unlink(path.join(DATA_DIR, 'model-cards.json'));
   } catch {
     // Doesn't exist, fine
+  }
+
+  // Remove stale category chunk files (chunks from previous runs not in current set)
+  try {
+    const existingFiles = await fs.readdir(DATA_DIR);
+    const currentChunkFiles = new Set(Object.values(chunksMeta).map((c) => c.file));
+    for (const file of existingFiles) {
+      if (file.startsWith('model-cards-cat-') && file.endsWith('.json') && !currentChunkFiles.has(file)) {
+        await fs.unlink(path.join(DATA_DIR, file));
+        log(`Removed stale chunk: ${file}`);
+      }
+    }
+  } catch {
+    // Ignore readdir errors
   }
 
   // category-tree.json
@@ -867,16 +1028,27 @@ async function main(): Promise<void> {
   if (isIncremental) {
     log('Incremental sync: merging with existing data...');
 
-    // Load existing chunks
+    // Load existing chunks — supports both legacy numeric and new category-based meta
     const metaPath = path.join(DATA_DIR, 'model-cards-meta.json');
     let existingModels: FrontendModel[] = [];
     try {
       const metaRaw = await fs.readFile(metaPath, 'utf-8');
-      const meta = JSON.parse(metaRaw) as { chunks: number };
-      for (let i = 0; i < meta.chunks; i++) {
-        const chunkPath = path.join(DATA_DIR, `model-cards-${i}.json`);
-        const chunk: FrontendModel[] = JSON.parse(await fs.readFile(chunkPath, 'utf-8'));
-        existingModels.push(...chunk);
+      const meta = JSON.parse(metaRaw) as { chunks: number | Record<string, { file: string }> };
+
+      if (typeof meta.chunks === 'number') {
+        // Legacy numeric format
+        for (let i = 0; i < meta.chunks; i++) {
+          const chunkPath = path.join(DATA_DIR, `model-cards-${i}.json`);
+          const chunk: FrontendModel[] = JSON.parse(await fs.readFile(chunkPath, 'utf-8'));
+          existingModels.push(...chunk);
+        }
+      } else {
+        // New category-based format
+        for (const entry of Object.values(meta.chunks)) {
+          const chunkPath = path.join(DATA_DIR, entry.file);
+          const chunk: FrontendModel[] = JSON.parse(await fs.readFile(chunkPath, 'utf-8'));
+          existingModels.push(...chunk);
+        }
       }
     } catch {
       log('No existing model-cards chunks found, doing full write');
@@ -964,8 +1136,22 @@ async function main(): Promise<void> {
     log(`  Cleaned up ${staleThumbsRemoved} stale thumbs, ${staleFullRemoved} stale full images`);
   }
 
+  // Step 4b: Embed sprite info into model-cards (if sprite-map.json is available)
+  let modelsWithSprites = allModels;
+  try {
+    const spriteMapRaw = await fs.readFile(SPRITE_MAP_PATH, 'utf-8');
+    const spriteMapData = JSON.parse(spriteMapRaw) as SpriteMapFile;
+    modelsWithSprites = embedSpriteInfoIntoModels(allModels, spriteMapData);
+    const embeddedCount = modelsWithSprites.filter((m) =>
+      m.colorGroups.some((cg) => cg.images.some((img) => img.sprite))
+    ).length;
+    log(`Embedded sprite info into ${embeddedCount}/${modelsWithSprites.length} models`);
+  } catch {
+    log('No sprite-map.json available — skipping sprite embedding');
+  }
+
   // Step 5: Build search index (always from full model set)
-  const searchIndex = buildSearchIndex(allModels);
+  const searchIndex = buildSearchIndex(modelsWithSprites);
 
   // Step 6: Write output files
   const totalImages = allModels.reduce((sum, m) =>
@@ -973,7 +1159,7 @@ async function main(): Promise<void> {
 
   const imageFileNames = allImageTargets.map((t) => t.fileName);
   await writeDataFiles(
-    allModels,
+    modelsWithSprites,
     frontendCategories,
     searchIndex,
     imageFileNames,

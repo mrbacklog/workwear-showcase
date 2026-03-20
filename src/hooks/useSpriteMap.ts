@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { SpriteMap, ModelSpriteEntry } from '@/types/product';
+import type { SpriteMap, ModelSpriteEntry, EmbeddedSpriteInfo } from '@/types/product';
 
 /** Global singleton: loaded once, shared across all components */
 let cachedSpriteMap: SpriteMap | null = null;
@@ -67,9 +67,53 @@ export function useSpriteMap() {
     });
   }, []);
 
-  /** Get sprite info for a specific image within a model */
+  /**
+   * Build SpriteInfo from embedded sprite data (no sprite-map.json needed).
+   * Used when model-cards have been synced with embedded sprite coordinates.
+   */
+  const getSpriteInfoFromEmbedded = useCallback(
+    (embedded: EmbeddedSpriteInfo, imageKey: string, imageBase?: string): SpriteInfo => {
+      const { col, row, cols: spriteCols, rows: spriteRows, thumbSrc, fullSrc } = embedded;
+
+      const posX = spriteCols <= 1 ? '0%' : `${(col / (spriteCols - 1)) * 100}%`;
+      const posY = spriteRows <= 1 ? '0%' : `${(row / (spriteRows - 1)) * 100}%`;
+
+      const lastDash = imageKey.lastIndexOf('-');
+      const ean = imageKey.substring(0, lastDash);
+      const seq = imageKey.substring(lastDash + 1);
+      const base = imageBase ?? spriteMap?.imageBase ?? '';
+
+      return {
+        thumbSrc,
+        fullSrc,
+        thumbPos: `${posX} ${posY}`,
+        fullPos: `${posX} ${posY}`,
+        thumbSize: `${spriteCols * 100}% ${spriteRows * 100}%`,
+        fullSize: `${spriteCols * 100}% ${spriteRows * 100}%`,
+        originalUrl: base ? `${base}/${ean}/${seq}?size=original` : '',
+      };
+    },
+    [spriteMap],
+  );
+
+  /** Get sprite info for a specific image within a model.
+   *
+   * Accepts an optional embedded sprite object. When present, it is used
+   * directly and the sprite-map.json fallback is skipped, which means the
+   * hook does not need to be loaded at all for those images.
+   */
   const getSpriteInfo = useCallback(
-    (slug: string, imageKey: string): SpriteInfo | null => {
+    (
+      slug: string,
+      imageKey: string,
+      embedded?: EmbeddedSpriteInfo | null,
+    ): SpriteInfo | null => {
+      // Fast path: use embedded sprite data from model-cards
+      if (embedded) {
+        return getSpriteInfoFromEmbedded(embedded, imageKey);
+      }
+
+      // Fallback: look up in sprite-map.json (backwards compatibility)
       if (!spriteMap) return null;
       const entry = spriteMap.models[slug];
       if (!entry) return null;
@@ -100,7 +144,7 @@ export function useSpriteMap() {
         originalUrl: `${spriteMap.imageBase}/${ean}/${seq}?size=original`,
       };
     },
-    [spriteMap],
+    [spriteMap, getSpriteInfoFromEmbedded],
   );
 
   /** Get the model sprite entry for prefetching */

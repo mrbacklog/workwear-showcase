@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { CategorySidebar } from '@/components/category/CategorySidebar';
-import { ModelCard } from '@/components/search/ModelCard';
+import { VirtualGrid } from '@/components/search/VirtualGrid';
 import { useSearch } from '@/hooks/useSearch';
 import { useModelCards } from '@/hooks/useModelCards';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
@@ -25,7 +25,9 @@ function SearchPageContent() {
   const initialQuery = searchParams.get('q') ?? '';
   const categoryParam = searchParams.get('cat') ?? null;
 
-  const { query, setQuery, results, isReady, isLoading: isSearching } = useSearch();
+  const { query, setQuery, activate, results, isReady, isLoading: isSearching } = useSearch({
+    initialQuery,
+  });
   const { models, getBySlug, getBrands } = useModelCards();
   const { tree, isLoading: isCategoryLoading, findCategory } = useCategoryTree();
   const { isUnlocked } = useShowcaseAuth();
@@ -278,7 +280,7 @@ function SearchPageContent() {
 
   return (
     <>
-      <Header searchValue={headerValue} onSearchChange={handleSearchChange} />
+      <Header searchValue={headerValue} onSearchChange={handleSearchChange} onSearchFocus={activate} />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex gap-8">
@@ -410,13 +412,13 @@ function SearchPageContent() {
                       <> in {selectedCategoryNode.nameNl}</>
                     )}
                   </p>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-                    {filteredResults.map((result) => {
+                  <VirtualGrid
+                    items={filteredResults.flatMap((result) => {
                       const model = getBySlug(result.slug);
-                      if (!model) return null;
-                      return <ModelCard key={result.id} model={model} preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined} />;
+                      return model ? [model] : [];
                     })}
-                  </div>
+                    preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                  />
                 </>
               )
             ) : selectedCategory ? (
@@ -438,11 +440,10 @@ function SearchPageContent() {
                     {browseModels.length === 1 ? 'product' : 'producten'} in{' '}
                     {selectedCategoryNode?.nameNl}
                   </p>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-                    {browseModels.map((model) => (
-                      <ModelCard key={model.slug} model={model} preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined} />
-                    ))}
-                  </div>
+                  <VirtualGrid
+                    items={browseModels}
+                    preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                  />
                 </>
               )
             ) : (
@@ -452,11 +453,10 @@ function SearchPageContent() {
                   {colorFilteredModels.length}{' '}
                   {colorFilteredModels.length === 1 ? 'product' : 'producten'}
                 </p>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-                  {colorFilteredModels.map((model) => (
-                    <ModelCard key={model.slug} model={model} preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined} />
-                  ))}
-                </div>
+                <VirtualGrid
+                  items={colorFilteredModels}
+                  preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                />
               </>
             )}
           </div>

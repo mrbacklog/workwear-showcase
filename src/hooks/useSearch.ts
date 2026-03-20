@@ -4,11 +4,14 @@
  * React hook wrapping SearchManager for full-text product search.
  *
  * Provides debounced search (150ms) and auto-suggest (100ms) with
- * lazy index loading on first mount.
+ * lazy index loading — only triggered on first user interaction (focus
+ * or when setQuery is called with a non-empty value).
+ *
+ * Pass `initialQuery` to trigger loading immediately (e.g. when URL has ?q=).
  *
  * @example
  * ```tsx
- * const { query, setQuery, results, suggestions, isReady, isLoading } = useSearch();
+ * const { query, setQuery, activate, results, suggestions, isReady, isLoading } = useSearch({ initialQuery: 'polo' });
  * ```
  */
 
@@ -19,11 +22,18 @@ import type { SearchResult } from '@/lib/search/types';
 const SEARCH_DEBOUNCE_MS = 150;
 const SUGGEST_DEBOUNCE_MS = 100;
 
+export interface UseSearchOptions {
+  /** When provided the index is loaded immediately (e.g. URL has ?q=) */
+  initialQuery?: string;
+}
+
 export interface UseSearchReturn {
   /** Current search query */
   query: string;
-  /** Update the search query (triggers debounced search + suggest) */
+  /** Update the search query (triggers debounced search + suggest, and lazy-loads index on first call) */
   setQuery: (query: string) => void;
+  /** Call this when the search field receives focus to trigger lazy index loading */
+  activate: () => void;
   /** Search results ranked by relevance */
   results: SearchResult[];
   /** Auto-suggest completions for the current query */
@@ -34,7 +44,9 @@ export interface UseSearchReturn {
   isLoading: boolean;
 }
 
-export function useSearch(): UseSearchReturn {
+export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
+  const { initialQuery } = options;
+
   const [query, setQueryState] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -44,12 +56,16 @@ export function useSearch(): UseSearchReturn {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const managerRef = useRef<SearchManager | null>(null);
+  const loadTriggeredRef = useRef(false);
 
   // ---------------------------------------------------------------------------
-  // Initialize search manager on mount
+  // Index loader — safe to call multiple times
   // ---------------------------------------------------------------------------
 
-  useEffect(() => {
+  const triggerLoad = useCallback(() => {
+    if (loadTriggeredRef.current) return;
+    loadTriggeredRef.current = true;
+
     const manager = SearchManager.getInstance();
     managerRef.current = manager;
 
@@ -70,10 +86,24 @@ export function useSearch(): UseSearchReturn {
       })
       .catch((error) => {
         console.error('[useSearch] Failed to load search index:', error);
+        // Reset so a retry is possible on next interaction
+        loadTriggeredRef.current = false;
       })
       .finally(() => {
         setIsLoading(false);
       });
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // If an initialQuery is provided (e.g. ?q= in URL), load index immediately
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      triggerLoad();
+    }
+  // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -137,12 +167,17 @@ export function useSearch(): UseSearchReturn {
   );
 
   // ---------------------------------------------------------------------------
-  // Query setter with debounced triggers
+  // Query setter with debounced triggers — also activates lazy load
   // ---------------------------------------------------------------------------
 
   const setQuery = useCallback(
     (newQuery: string) => {
       setQueryState(newQuery);
+
+      // Lazy-load index on first interaction
+      if (newQuery.trim()) {
+        triggerLoad();
+      }
 
       // Clear pending timers
       if (searchTimerRef.current) {
@@ -167,8 +202,16 @@ export function useSearch(): UseSearchReturn {
         executeSearch(newQuery);
       }, SEARCH_DEBOUNCE_MS);
     },
-    [executeSearch, executeSuggest]
+    [triggerLoad, executeSearch, executeSuggest]
   );
+
+  // ---------------------------------------------------------------------------
+  // activate — call when search field receives focus
+  // ---------------------------------------------------------------------------
+
+  const activate = useCallback(() => {
+    triggerLoad();
+  }, [triggerLoad]);
 
   // ---------------------------------------------------------------------------
   // Cleanup timers on unmount
@@ -184,6 +227,7 @@ export function useSearch(): UseSearchReturn {
   return {
     query,
     setQuery,
+    activate,
     results,
     suggestions,
     isReady,
