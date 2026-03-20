@@ -208,7 +208,7 @@ export async function generateBrandSprites(
 
   let brandsProcessed = 0;
   const totalBrands = brandModels.size;
-  const BRAND_BATCH = 8;
+  const BRAND_BATCH = 5;
 
   // Process brands in small batches to control memory
   const brandEntries = Array.from(brandModels.entries());
