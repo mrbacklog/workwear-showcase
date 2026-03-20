@@ -16,6 +16,14 @@ on:
         options:
           - 'false'
           - 'true'
+      code_only:
+        description: 'Code-only deploy (skip sync, use cached data)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
   # Trigger via API (repository_dispatch) from backend worker
   repository_dispatch:
@@ -40,6 +48,7 @@ jobs:
         run: npm install
 
       - name: Restore image download cache
+        if: github.event.inputs.code_only != 'true'
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -60,6 +69,7 @@ jobs:
             showcase-data-
 
       - name: Sync product data from backend
+        if: github.event.inputs.code_only != 'true'
         run: |
           FORCE_FLAG=""
           if [ "${{ github.event.inputs.force || 'false' }}" = "true" ]; then
@@ -72,7 +82,7 @@ jobs:
 
       - name: Save image download cache
         uses: actions/cache/save@v4
-        if: always()
+        if: always() && github.event.inputs.code_only != 'true'
         with:
           path: |
             public/images/thumbs
@@ -80,6 +90,7 @@ jobs:
           key: showcase-dl-cache-${{ github.run_id }}
 
       - name: Remove individual images before build
+        if: github.event.inputs.code_only != 'true'
         run: |
           rm -rf public/images/thumbs public/images/full
           echo "Removed individual images (sprites contain all image data)"
@@ -125,9 +136,12 @@ jobs:
         run: |
           echo "### Showcase Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.code_only || 'false' }}" = "true" ]; then
+            echo "- Mode: **Code-only** (sync skipped, cached data used)" >> $GITHUB_STEP_SUMMARY
+          fi
           if [ "${{ steps.check-data.outputs.has_data }}" = "true" ]; then
-            echo "- Models synced: **${{ steps.check-data.outputs.models }}**" >> $GITHUB_STEP_SUMMARY
+            echo "- Models: **${{ steps.check-data.outputs.models }}**" >> $GITHUB_STEP_SUMMARY
             echo "- Status: Deployed to Cloudflare Pages" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- Status: No changes detected, deploy skipped" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: No data available, deploy skipped" >> $GITHUB_STEP_SUMMARY
           fi
