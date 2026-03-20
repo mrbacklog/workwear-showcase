@@ -47,26 +47,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Restore image download cache
-        if: github.event.inputs.code_only != 'true'
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            public/images/thumbs
-            public/images/full
-          key: showcase-dl-cache-v1
-          restore-keys: |
-            showcase-dl-cache-
-
-      - name: Restore sprite & data cache
+      - name: Restore data cache
         uses: actions/cache@v4
         with:
           path: |
-            public/images/sprites
             public/data
-          key: showcase-data-v1
+            .r2-manifest.json
+          key: showcase-data-v2-${{ github.sha }}
           restore-keys: |
-            showcase-data-
+            showcase-data-v2-
 
       - name: Sync product data from backend
         if: github.event.inputs.code_only != 'true'
@@ -84,23 +73,6 @@ jobs:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
-
-      - name: Save image download cache
-        uses: actions/cache/save@v4
-        if: always() && github.event.inputs.code_only != 'true'
-        with:
-          path: |
-            public/images/thumbs
-            public/images/full
-          key: showcase-dl-cache-v1
-
-      - name: Remove individual images before build
-        if: github.event.inputs.code_only != 'true'
-        run: |
-          rm -rf public/images/thumbs public/images/full
-          echo "Removed individual images (sprites contain all image data)"
-          SPRITE_COUNT=$(find public/images/sprites -name '*.webp' 2>/dev/null | wc -l)
-          echo "Sprite files: $SPRITE_COUNT (brand-grouped)"
 
       - name: Check if data was synced
         id: check-data
@@ -128,6 +100,7 @@ jobs:
             echo "::error::File count ($FILE_COUNT) approaching Cloudflare Pages 20K limit!"
             exit 1
           fi
+          echo "Images are served from R2 CDN (workwear-images.databiz.app), not from Pages"
 
       - name: Deploy to Cloudflare Pages
         if: steps.check-data.outputs.has_data == 'true'
@@ -146,6 +119,7 @@ jobs:
           fi
           if [ "${{ steps.check-data.outputs.has_data }}" = "true" ]; then
             echo "- Models: **${{ steps.check-data.outputs.models }}**" >> $GITHUB_STEP_SUMMARY
+            echo "- Images: **R2 CDN** (workwear-images.databiz.app)" >> $GITHUB_STEP_SUMMARY
             echo "- Status: Deployed to Cloudflare Pages" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Status: No data available, deploy skipped" >> $GITHUB_STEP_SUMMARY
