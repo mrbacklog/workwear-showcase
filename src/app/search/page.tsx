@@ -304,13 +304,8 @@ function SearchPageContent() {
       <Header searchValue={headerValue} onSearchChange={handleSearchChange} onSearchFocus={activate} />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Horizontal filter bar — brands and colors */}
-        <div className="mb-6 flex flex-wrap items-start gap-6">
-          <ColorFilter
-            colors={colorsForFilter}
-            selectedCodes={selectedColors}
-            onToggle={handleColorToggle}
-          />
+        {/* Horizontal brand bar — single row, no search */}
+        <div className="mb-6">
           <BrandFilter
             brands={brandsForFilter}
             selectedSlugs={selectedBrands}
@@ -319,7 +314,7 @@ function SearchPageContent() {
         </div>
 
         <div className="flex gap-8">
-          {/* Sidebar — categories only, hidden on mobile */}
+          {/* Sidebar — categories + colors, hidden on mobile */}
           <aside className="hidden w-64 shrink-0 lg:block sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
             {isCategoryLoading ? (
               <div className="space-y-2">
@@ -335,6 +330,14 @@ function SearchPageContent() {
                 onSelect={handleCategorySelect}
               />
             )}
+
+            <hr className="my-4 border-gray-200" />
+
+            <ColorFilter
+              colors={colorsForFilter}
+              selectedCodes={selectedColors}
+              onToggle={handleColorToggle}
+            />
           </aside>
 
           {/* Main content */}

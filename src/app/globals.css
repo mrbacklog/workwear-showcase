@@ -48,6 +48,15 @@ input,
   transition-timing-function: ease;
 }
 
+/* ─── Hide scrollbar for horizontal scroll containers ──── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* ─── Selection ─────────────────────────────────────────── */
 ::selection {
   background-color: #e5e7eb;
