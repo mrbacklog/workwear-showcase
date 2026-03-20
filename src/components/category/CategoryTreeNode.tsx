@@ -18,12 +18,12 @@ export function CategoryTreeNode({ node, depth, currentCode, counts, onSelect }:
   const isActive = node.code === currentCode;
   const hasChildren = node.children.length > 0;
 
-  // Auto-expand if current category is within this subtree
+  // Auto-expand if current category is within this subtree, or always for top-level
   const containsActive = currentCode
     ? isActive || hasDescendant(node, currentCode)
     : false;
 
-  const [expanded, setExpanded] = useState(containsActive);
+  const [expanded, setExpanded] = useState(depth === 0 || containsActive);
 
   const count = counts?.[node.code];
 
@@ -79,8 +79,16 @@ export function CategoryTreeNode({ node, depth, currentCode, counts, onSelect }:
           <span className="mr-1 inline-block h-5 w-5 shrink-0" />
         )}
 
-        {/* Category label: filter mode (button) or navigation mode (link) */}
-        {onSelect ? (
+        {/* Category label: top-level = non-clickable header, children = filter/link */}
+        {depth === 0 ? (
+          <span
+            className={labelClasses}
+            onClick={() => hasChildren && setExpanded(!expanded)}
+            style={{ cursor: hasChildren ? 'pointer' : 'default' }}
+          >
+            {labelContent}
+          </span>
+        ) : onSelect ? (
           <button
             type="button"
             onClick={() => onSelect(node.code)}

@@ -60,12 +60,12 @@ function isLightColor(hex: string): boolean {
 
 export function ColorFilter({ colors, selectedCodes, onToggle }: ColorFilterProps) {
   return (
-    <nav aria-label="Kleuren filter">
-      <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+    <div>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
         Kleuren
       </h2>
 
-      <div className="flex flex-wrap gap-2 px-2">
+      <div className="flex flex-wrap gap-2">
         {colors.map((color) => {
           const isSelected = selectedCodes.has(color.code);
           const isMulticolor = color.hexCode.startsWith('conic');
@@ -112,6 +112,6 @@ export function ColorFilter({ colors, selectedCodes, onToggle }: ColorFilterProp
           );
         })}
       </div>
-    </nav>
+    </div>
   );
 }

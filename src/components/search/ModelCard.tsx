@@ -14,6 +14,7 @@ interface ModelCardProps {
 
 export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [isCardHovered, setIsCardHovered] = useState(false);
   const { getSpriteInfo, prefetchFullSprite } = useSpriteMap();
 
   const initialGroupIndex = useMemo(() => {
@@ -64,9 +65,14 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
   }, [displayGroup, model.slug, getSpriteInfo]);
 
   // Prefetch full sprite on card hover
-  const handleCardHover = useCallback(() => {
+  const handleCardEnter = useCallback(() => {
+    setIsCardHovered(true);
     prefetchFullSprite(model.slug);
   }, [model.slug, prefetchFullSprite]);
+
+  const handleCardLeave = useCallback(() => {
+    setIsCardHovered(false);
+  }, []);
 
   // Build link URL: use colorRaw (unique per model) instead of colorCode (may have duplicates)
   const linkHref = useMemo(() => {
@@ -80,21 +86,23 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
   return (
     <Link
       href={linkHref}
-      className="group flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-md"
-      onMouseEnter={handleCardHover}
+      className="group flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 hover:shadow-lg hover:border-gray-300"
+      onMouseEnter={handleCardEnter}
+      onMouseLeave={handleCardLeave}
     >
       {/* Image */}
-      <div className="relative aspect-square bg-gray-50">
+      <div className="relative aspect-square overflow-hidden bg-gray-50">
         {displaySprite ? (
           <div
             role="img"
             aria-label={`${model.brandName} ${model.modelName}`}
-            className="h-full w-full"
+            className="h-full w-full transition-transform duration-300 ease-out"
             style={{
               backgroundImage: `url(${displaySprite.thumbSrc})`,
               backgroundPosition: displaySprite.thumbPos,
               backgroundRepeat: 'no-repeat',
               backgroundSize: displaySprite.thumbSize,
+              transform: isCardHovered ? 'scale(1.05)' : 'scale(1)',
             }}
           />
         ) : (
