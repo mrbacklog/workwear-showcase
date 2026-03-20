@@ -2,9 +2,9 @@
  * Sprite generation for showcase images.
  *
  * Combines images into BRAND-level sprite sheets using sharp.composite().
- * Both thumb (64px) and full (400px) sprites use the same grid layout (10 cols),
+ * Both thumb (128px) and full (800px) sprites use the same grid layout (10 cols),
  * so one position map works for both. Large brands are chunked to stay within
- * WebP dimension limits (16383px).
+ * WebP dimension limits (16383px). Max 20 rows per chunk at 800px = 16000px.
  *
  * Result: ~200-300 sprite files instead of ~11,000 per-model files.
  */
@@ -16,13 +16,13 @@ import * as path from 'path';
 // Configuration
 // ---------------------------------------------------------------------------
 
-export const THUMB_CELL = 64;
-export const FULL_CELL = 400;
+export const THUMB_CELL = 128;
+export const FULL_CELL = 800;
 export const SPRITE_COLS = 10; // Both thumb and full use 10 columns
 export const WEBP_QUALITY = 82;
 const WEBP_MAX_DIMENSION = 16383;
-const MAX_ROWS_FULL = Math.floor(WEBP_MAX_DIMENSION / FULL_CELL); // 40
-const MAX_IMAGES_PER_CHUNK = SPRITE_COLS * MAX_ROWS_FULL; // 400
+const MAX_ROWS_FULL = Math.floor(WEBP_MAX_DIMENSION / FULL_CELL); // 20
+const MAX_IMAGES_PER_CHUNK = SPRITE_COLS * MAX_ROWS_FULL; // 200
 
 // ---------------------------------------------------------------------------
 // Types

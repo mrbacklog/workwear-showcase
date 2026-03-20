@@ -35,7 +35,13 @@ function ProductGallery({
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [fullLoaded, setFullLoaded] = useState(false);
   const { getSpriteInfo } = useSpriteMap();
+
+  // Reset fullLoaded when switching images
+  useEffect(() => {
+    setFullLoaded(false);
+  }, [selectedIndex]);
 
   if (images.length === 0) {
     return (
@@ -50,18 +56,31 @@ function ProductGallery({
 
   return (
     <div className="space-y-3">
-      {/* Main image with crossfade */}
+      {/* Main image: full-size from API with sprite placeholder */}
       <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-50">
         {mainSprite ? (
           <>
-            <CrossfadeSprite
-              src={mainSprite.fullSrc}
-              position={mainSprite.fullPos}
-              size={mainSprite.fullSize}
+            {/* Sprite as instant placeholder */}
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `url(${mainSprite.fullSrc})`,
+                backgroundPosition: mainSprite.fullPos,
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: mainSprite.fullSize,
+                opacity: fullLoaded ? 0 : 1,
+                transition: 'opacity 200ms ease-out',
+              }}
+            />
+            {/* Full-size original from backend API */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mainSprite.originalUrl}
               alt={modelName}
-              className="h-full w-full"
+              className="absolute inset-0 h-full w-full object-contain p-4 cursor-zoom-in"
+              style={{ opacity: fullLoaded ? 1 : 0, transition: 'opacity 200ms ease-out' }}
+              onLoad={() => setFullLoaded(true)}
               onClick={() => setLightboxUrl(mainSprite.originalUrl)}
-              duration={250}
             />
             {/* Zoom icon */}
             <button
