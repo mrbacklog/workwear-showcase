@@ -32,19 +32,19 @@ export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHe
   const statusLabel = model.publicationStatus === 'core' ? 'Kern' : 'Rand';
   const statusClasses =
     model.publicationStatus === 'core'
-      ? 'bg-green-100 text-green-800'
-      : 'bg-yellow-100 text-yellow-800';
+      ? 'bg-gray-100 text-gray-600'
+      : 'bg-amber-50 text-amber-700';
 
   return (
     <div>
       {/* Category breadcrumb */}
       {categorySegments.length > 0 && (
-        <nav className="mb-2 flex items-center gap-1 text-xs text-gray-500" aria-label="Breadcrumb">
+        <nav className="mb-3 flex items-center gap-1 text-xs text-gray-400" aria-label="Breadcrumb">
           {categorySegments.map((segment, index) => (
             <span key={index} className="flex items-center gap-1">
               {index > 0 && (
                 <svg
-                  className="h-3 w-3 text-gray-300"
+                  className="h-3 w-3 text-gray-300 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
@@ -54,7 +54,7 @@ export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHe
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               )}
-              <span>{segment}</span>
+              <span className="truncate">{segment}</span>
             </span>
           ))}
         </nav>
@@ -62,31 +62,31 @@ export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHe
 
       {/* Brand */}
       <Link
-        href={`/category/${model.brandSlug}`}
-        className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
+        href={`/search/?brand=${encodeURIComponent(model.brandSlug || model.brandName)}`}
+        className="text-xs font-medium uppercase tracking-wider text-gray-400 hover:text-gray-600"
       >
         {model.brandName}
       </Link>
 
       {/* Model name + status badge */}
-      <div className="mt-1 flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">{model.modelName}</h1>
+      <div className="mt-1 flex items-start gap-3">
+        <h1 className="text-2xl font-bold leading-tight text-gray-900">{model.modelName}</h1>
         {showBadge && (
           <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClasses}`}
+            className={`mt-1 inline-flex shrink-0 items-center rounded px-2 py-0.5 text-xs font-medium ${statusClasses}`}
           >
             {statusLabel}
           </span>
         )}
       </div>
 
-      {/* Action slot (nomination button) */}
-      {actionSlot && <div className="mt-3">{actionSlot}</div>}
-
       {/* Price range */}
-      <p className="mt-2 text-xl font-semibold text-gray-900">
+      <p className="mt-2 text-lg font-semibold text-gray-900">
         {formatPriceRange(minPrice, maxPrice)}
       </p>
+
+      {/* Action slot (nomination button) */}
+      {actionSlot && <div className="mt-4">{actionSlot}</div>}
     </div>
   );
 }

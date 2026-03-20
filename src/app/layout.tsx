@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Workwear Showcase',
   description: 'Product catalogus voor werkkleding',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -25,10 +28,39 @@ export default function RootLayout({
         <link rel="preload" href="/data/model-cards-meta.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/category-tree.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/sprite-map.json" as="fetch" crossOrigin="anonymous" />
+        <style>{`
+          @keyframes page-load-progress {
+            0%   { transform: translateX(-100%); }
+            60%  { transform: translateX(-20%); }
+            100% { transform: translateX(0%); }
+          }
+          @keyframes page-load-fade {
+            0%   { opacity: 1; }
+            100% { opacity: 0; }
+          }
+          .page-loading-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            z-index: 9999;
+            overflow: hidden;
+          }
+          .page-loading-bar::after {
+            content: '';
+            display: block;
+            height: 100%;
+            background: #111827;
+            animation: page-load-progress 8s ease-out forwards,
+                       page-load-fade 0.4s ease 8s forwards;
+          }
+        `}</style>
       </head>
       <body
         className={`${inter.className} bg-white text-gray-900 min-h-screen flex flex-col`}
       >
+        <div className="page-loading-bar" aria-hidden="true" />
         <ShowcaseAuthProvider>
           {/* Header is rendered per-page because it requires client state (search input) */}
           <main className="flex-1 pt-16">{children}</main>

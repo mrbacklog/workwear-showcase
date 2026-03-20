@@ -1,10 +1,55 @@
 @import "tailwindcss";
 
+/* ─── Smooth scrolling ─────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Focus states — accessible, minimal ──────────────── */
+:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default focus ring, keep :focus-visible only */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Animations ────────────────────────────────────────── */
 @keyframes slide-in {
-  from { transform: translateY(1rem); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { transform: translateY(0.75rem); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 
 .animate-slide-in {
-  animation: slide-in 0.2s ease-out;
+  animation: slide-in 0.18s ease-out both;
+}
+
+/* ─── Skeleton loading pulse — neutral, not blue ───────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+  background-color: #f3f4f6;
+}
+
+/* ─── Transitions — apply to interactive elements ──────── */
+button,
+a,
+input,
+[role="button"] {
+  transition-property: color, background-color, border-color, box-shadow, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* ─── Selection ─────────────────────────────────────────── */
+::selection {
+  background-color: #e5e7eb;
+  color: #111827;
 }

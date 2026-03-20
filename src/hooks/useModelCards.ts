@@ -17,7 +17,7 @@
  * ```
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import type { ShowcaseModel } from '@/types/product';
 
 const MODEL_CARDS_META_PATH = '/data/model-cards-meta.json';
@@ -93,6 +93,51 @@ export function useModelCards(): UseModelCardsReturn {
   const categoryMapRef = useRef<Map<string, ShowcaseModel[]>>(new Map());
   /** Cached brand list, computed once after load */
   const brandsRef = useRef<BrandInfo[]>([]);
+  /** Deduplication set shared across progressive chunk loads */
+  const seenSlugsRef = useRef<Set<string>>(new Set());
+
+  // ---------------------------------------------------------------------------
+  // Merge a chunk of models into the shared indexes and update state
+  // ---------------------------------------------------------------------------
+
+  const mergeChunk = useCallback((chunk: ShowcaseModel[]) => {
+    const slugMap = slugMapRef.current;
+    const categoryMap = categoryMapRef.current;
+
+    for (const model of chunk) {
+      if (seenSlugsRef.current.has(model.slug)) continue;
+      seenSlugsRef.current.add(model.slug);
+
+      slugMap.set(model.slug, model);
+
+      const existing = categoryMap.get(model.categoryCode);
+      if (existing) {
+        existing.push(model);
+      } else {
+        categoryMap.set(model.categoryCode, [model]);
+      }
+    }
+
+    // Rebuild brand list from the full slug map
+    const brandCountMap = new Map<string, { name: string; slug: string; count: number }>();
+    for (const model of slugMap.values()) {
+      const entry = brandCountMap.get(model.brandSlug);
+      if (entry) {
+        entry.count += 1;
+      } else {
+        brandCountMap.set(model.brandSlug, {
+          name: model.brandName,
+          slug: model.brandSlug,
+          count: 1,
+        });
+      }
+    }
+    brandsRef.current = Array.from(brandCountMap.values())
+      .map((b) => ({ name: b.name, slug: b.slug, modelCount: b.count }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+
+    setModels(Array.from(slugMap.values()));
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Fetch model cards on mount
@@ -115,82 +160,50 @@ export function useModelCards(): UseModelCardsReturn {
         // Resolve chunk file paths from either meta format
         const chunkFiles: string[] = resolveChunkFiles(meta);
 
-        // Load all chunks in parallel
-        const chunkPromises = chunkFiles.map((file) =>
+        if (chunkFiles.length === 0) {
+          if (!cancelled) setIsLoading(false);
+          return;
+        }
+
+        // Load first chunk immediately to show results fast, then load the rest
+        const [firstFile, ...remainingFiles] = chunkFiles;
+
+        const fetchChunk = (file: string): Promise<ShowcaseModel[]> =>
           fetch(`/data/${file}`).then((r) => {
             if (!r.ok) throw new Error(`Failed to fetch chunk ${file}: ${r.status}`);
             return r.json() as Promise<ShowcaseModel[]>;
-          })
-        );
-        const chunks = await Promise.all(chunkPromises);
-        const rawData: ShowcaseModel[] = chunks.flat();
+          });
 
-        // Deduplicate by slug (keep first occurrence)
-        const seenSlugs = new Set<string>();
-        const data: ShowcaseModel[] = [];
-        for (const model of rawData) {
-          if (!seenSlugs.has(model.slug)) {
-            seenSlugs.add(model.slug);
-            data.push(model);
-          }
-        }
-
+        // Show first chunk as soon as it arrives
+        const firstChunk = await fetchChunk(firstFile);
         if (cancelled) return;
+        mergeChunk(firstChunk);
+        // Signal that the initial content is ready (stops skeleton)
+        setIsLoading(false);
 
-        // Build indexes
-        const slugMap = new Map<string, ShowcaseModel>();
-        const categoryMap = new Map<string, ShowcaseModel[]>();
-        const brandCountMap = new Map<string, { name: string; slug: string; count: number }>();
+        const elapsed0 = (performance.now() - start).toFixed(1);
+        console.debug(
+          `[useModelCards] First chunk (${firstChunk.length} models) shown in ${elapsed0}ms`
+        );
 
-        for (const model of data) {
-          // Slug index
-          slugMap.set(model.slug, model);
-
-          // Category index
-          const existing = categoryMap.get(model.categoryCode);
-          if (existing) {
-            existing.push(model);
-          } else {
-            categoryMap.set(model.categoryCode, [model]);
-          }
-
-          // Brand aggregation
-          const brandEntry = brandCountMap.get(model.brandSlug);
-          if (brandEntry) {
-            brandEntry.count += 1;
-          } else {
-            brandCountMap.set(model.brandSlug, {
-              name: model.brandName,
-              slug: model.brandSlug,
-              count: 1,
-            });
-          }
+        // Load remaining chunks and merge progressively using startTransition
+        // so these updates don't block urgent interactions (PIN entry, filters).
+        if (remainingFiles.length > 0) {
+          const remainingPromises = remainingFiles.map((file) =>
+            fetchChunk(file).then((chunk) => {
+              if (!cancelled) startTransition(() => mergeChunk(chunk));
+            })
+          );
+          await Promise.all(remainingPromises);
         }
-
-        // Build sorted brand list
-        const brands: BrandInfo[] = Array.from(brandCountMap.values())
-          .map((b) => ({
-            name: b.name,
-            slug: b.slug,
-            modelCount: b.count,
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name, 'nl'));
-
-        slugMapRef.current = slugMap;
-        categoryMapRef.current = categoryMap;
-        brandsRef.current = brands;
-        setModels(data);
 
         const elapsed = (performance.now() - start).toFixed(1);
         console.debug(
-          `[useModelCards] Loaded ${data.length} models, ${brands.length} brands in ${elapsed}ms`
+          `[useModelCards] All ${seenSlugsRef.current.size} models loaded in ${elapsed}ms`
         );
       } catch (error) {
         console.error('[useModelCards] Failed to load model cards:', error);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       }
     }
 
@@ -199,7 +212,7 @@ export function useModelCards(): UseModelCardsReturn {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [mergeChunk]);
 
   // ---------------------------------------------------------------------------
   // Query helpers

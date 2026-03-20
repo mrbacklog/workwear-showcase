@@ -1,10 +1,13 @@
 export function Footer() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="border-t border-gray-200 bg-white py-8">
+    <footer className="border-t border-gray-100 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="text-center text-sm text-gray-400">
-          &copy; 2026 DataBiz
-        </p>
+        <div className="flex items-center justify-between py-6">
+          <p className="text-xs text-gray-400">&copy; {year} DataBiz</p>
+          <p className="text-xs text-gray-300">Workwear Showcase</p>
+        </div>
       </div>
     </footer>
   );

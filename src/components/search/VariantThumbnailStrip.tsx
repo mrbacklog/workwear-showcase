@@ -152,6 +152,11 @@ export function VariantThumbnailStrip({ variants, modelSlug, onHover, activeInde
         >
           {variants.map((v, i) => {
             const isActive = activeIndex === i;
+            // Determine which thumbnails are within or adjacent to the visible window.
+            // We use the snapped offset position to decide — thumbnails outside the
+            // ±1 buffer range skip the sprite lookup to reduce paint work.
+            const snappedIndex = Math.round(offset / STEP);
+            const isVisible = i >= snappedIndex - 1 && i < snappedIndex + MAX_VISIBLE + 1;
             return (
               <button
                 key={`${v.code}-${i}`}
@@ -165,6 +170,15 @@ export function VariantThumbnailStrip({ variants, modelSlug, onHover, activeInde
                 aria-label={`Kleur ${v.colorRaw || v.code}`}
               >
                 {(() => {
+                  if (!isVisible) {
+                    // Offscreen: render colour swatch only, skip sprite fetch
+                    return (
+                      <span
+                        className="absolute inset-1 rounded-full"
+                        style={{ backgroundColor: v.hexCode }}
+                      />
+                    );
+                  }
                   const sprite = v.imageKey ? getSpriteInfo(modelSlug, v.imageKey) : null;
                   if (sprite) {
                     return (

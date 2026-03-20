@@ -68,11 +68,11 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
     prefetchFullSprite(model.slug);
   }, [model.slug, prefetchFullSprite]);
 
-  // Build link URL: include color code when hovering a specific thumb
+  // Build link URL: use colorRaw (unique per model) instead of colorCode (may have duplicates)
   const linkHref = useMemo(() => {
     if (hoveredIndex !== null && hoveredIndex !== initialGroupIndex) {
-      const colorCode = model.colorGroups[hoveredIndex]?.colorCode;
-      if (colorCode) return `/product/${model.slug}/?color=${encodeURIComponent(colorCode)}`;
+      const colorRaw = model.colorGroups[hoveredIndex]?.colorRaw;
+      if (colorRaw) return `/product/${model.slug}/?color=${encodeURIComponent(colorRaw)}`;
     }
     return `/product/${model.slug}/`;
   }, [hoveredIndex, initialGroupIndex, model.slug, model.colorGroups]);

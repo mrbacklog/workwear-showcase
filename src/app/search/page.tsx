@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState, useCallback } from 'react';
+import { Suspense, useEffect, useMemo, useState, useCallback, memo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { CategorySidebar } from '@/components/category/CategorySidebar';
@@ -16,6 +16,27 @@ import type { BrandInfo } from '@/hooks/useModelCards';
 import type { ColorInfo } from '@/components/search/ColorFilter';
 
 // ---------------------------------------------------------------------------
+// Skeleton grid shown while model cards data is loading
+// ---------------------------------------------------------------------------
+
+const SkeletonGrid = memo(function SkeletonGrid() {
+  return (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div key={i} className="animate-pulse rounded-lg border border-gray-100 bg-white">
+          <div className="aspect-square bg-gray-100" />
+          <div className="p-3 space-y-2">
+            <div className="h-3 w-16 rounded bg-gray-100" />
+            <div className="h-4 w-32 rounded bg-gray-100" />
+            <div className="h-4 w-20 rounded bg-gray-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Search Page Content (uses useSearchParams, must be inside Suspense)
 // ---------------------------------------------------------------------------
 
@@ -28,7 +49,7 @@ function SearchPageContent() {
   const { query, setQuery, activate, results, isReady, isLoading: isSearching } = useSearch({
     initialQuery,
   });
-  const { models, getBySlug, getBrands } = useModelCards();
+  const { models, isLoading: isModelsLoading, getBySlug, getBrands } = useModelCards();
   const { tree, isLoading: isCategoryLoading, findCategory } = useCategoryTree();
   const { isUnlocked } = useShowcaseAuth();
 
@@ -446,6 +467,12 @@ function SearchPageContent() {
                   />
                 </>
               )
+            ) : isModelsLoading && colorFilteredModels.length === 0 ? (
+              /* Loading state: show skeleton grid while first chunk loads */
+              <>
+                <p className="mb-6 text-sm text-gray-400 animate-pulse">Producten laden...</p>
+                <SkeletonGrid />
+              </>
             ) : (
               /* Default: show all products */
               <>

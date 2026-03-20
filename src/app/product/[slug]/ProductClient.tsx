@@ -373,15 +373,19 @@ export default function ProductClient() {
 
   const model = getBySlug(slug);
 
-  // Read initial color from URL query param (?color=CODE)
+  // Read initial color from URL query param (?color=RAW)
+  // Priority: match colorRaw first (unique per model), then fallback to colorCode
   useEffect(() => {
     if (!model) return;
     const searchParams = new URLSearchParams(window.location.search);
     const colorParam = searchParams.get('color');
     if (colorParam) {
-      const idx = model.colorGroups.findIndex(
-        (cg) => cg.colorCode === colorParam || cg.colorRaw === colorParam,
-      );
+      // Try exact colorRaw match first (unique, preferred)
+      let idx = model.colorGroups.findIndex((cg) => cg.colorRaw === colorParam);
+      // Fallback to colorCode match (may not be unique, legacy support)
+      if (idx < 0) {
+        idx = model.colorGroups.findIndex((cg) => cg.colorCode === colorParam);
+      }
       if (idx >= 0) setSelectedColorIndex(idx);
     }
   }, [model]);
