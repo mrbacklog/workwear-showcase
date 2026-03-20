@@ -1082,7 +1082,7 @@ async function main(): Promise<void> {
     allModels = exportedModels;
   }
 
-  // Step 4: Brand-grouped sprite generation
+  // Step 4: Brand-grouped sprite generation (incremental via per-brand fingerprinting)
   const spriteMapExists = await fs.access(SPRITE_MAP_PATH).then(() => true).catch(() => false);
   const c = changeReport.changes;
   const needsSpriteRegen = FLAG_FORCE
@@ -1099,24 +1099,21 @@ async function main(): Promise<void> {
     log('No image changes detected — reusing existing sprites (skipping download + generation)');
   } else {
     // Download all images needed for sprites
-    const imageTargets = isIncremental && spriteMapExists
-      ? collectAllImageTargets(allModels.filter((m) => new Set(changeReport.changedModelIds).has(m.id)))
-      : allImageTargets;
-
-    if (imageTargets.length > 0) {
-      log(`Downloading ${imageTargets.length} images (thumbs + full)...`);
-      await downloadImages(imageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-      await downloadImages(imageTargets, FULL_DIR, 'full', 'Full');
+    // Always download all images so cached source files are available for sprite generation
+    if (allImageTargets.length > 0) {
+      log(`Downloading ${allImageTargets.length} images (thumbs + full)...`);
+      await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
+      await downloadImages(allImageTargets, FULL_DIR, 'full', 'Full');
     }
 
-    // Generate brand-grouped sprites (paired thumb + full per brand chunk)
+    // Generate brand-grouped sprites (incremental: only changed brands regenerate)
     const brandSpriteModels: BrandSpriteModel[] = allModels.map((m) => ({
       slug: m.slug,
       brandSlug: m.brandSlug,
       colorGroups: m.colorGroups,
     }));
 
-    log(`Generating brand-grouped sprites for ${allModels.length} models...`);
+    log(`Generating brand-grouped sprites for ${allModels.length} models (incremental)...`);
     await generateBrandSprites(
       brandSpriteModels,
       THUMBS_DIR,
@@ -1125,6 +1122,7 @@ async function main(): Promise<void> {
       SPRITE_MAP_PATH,
       IMAGE_BASE_URL,
       log,
+      FLAG_FORCE,
     );
   }
 
