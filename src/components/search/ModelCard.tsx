@@ -106,13 +106,15 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
 
       {/* Details — flex column so thumbnails stick to bottom */}
       <div className="flex flex-1 flex-col p-3">
-        <p className="text-xs text-gray-500">{model.brandName}</p>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-xs text-gray-500">{model.brandName}</p>
+          <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">
+            {minPrice === maxPrice ? formatPrice(minPrice) : formatPriceRange(minPrice, maxPrice)}
+          </p>
+        </div>
         <h3 className="mt-0.5 text-sm font-medium text-gray-900 group-hover:text-gray-700 line-clamp-2">
           {model.modelName}
         </h3>
-        <p className="mt-1 text-sm font-semibold text-gray-900">
-          {minPrice === maxPrice ? formatPrice(minPrice) : formatPriceRange(minPrice, maxPrice)}
-        </p>
 
         {/* Spacer pushes thumbnails to bottom */}
         <div className="flex-1" />
