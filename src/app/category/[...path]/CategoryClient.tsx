@@ -9,7 +9,7 @@ import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { useModelCards } from '@/hooks/useModelCards';
 import { buildAggregatedCounts, getDescendantCodes } from '@/lib/category-utils';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
-import { useSpriteMap } from '@/hooks/useSpriteMap';
+import { ProductImage } from '@/components/ui/ProductImage';
 import { formatPrice } from '@/lib/format';
 import type { CategoryNode, ShowcaseModel } from '@/types/product';
 
@@ -18,16 +18,14 @@ import type { CategoryNode, ShowcaseModel } from '@/types/product';
 // ---------------------------------------------------------------------------
 
 function ProductCard({ model }: { model: ShowcaseModel }) {
-  const { getSpriteInfo } = useSpriteMap();
-
-  const displaySprite = useMemo(() => {
+  const displayImage = useMemo(() => {
     for (const cg of model.colorGroups) {
       if (cg.images.length > 0) {
-        return getSpriteInfo(model.slug, cg.images[0].path, cg.images[0].sprite);
+        return cg.images[0];
       }
     }
     return null;
-  }, [model, getSpriteInfo]);
+  }, [model]);
 
   const minPrice = useMemo(() => {
     let lowest = Infinity;
@@ -47,17 +45,13 @@ function ProductCard({ model }: { model: ShowcaseModel }) {
       className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="aspect-[3/4] w-full overflow-hidden bg-gray-50">
-        {displaySprite ? (
-          <div
-            role="img"
-            aria-label={model.modelName || model.modelCode || ''}
-            className="h-full w-full"
-            style={{
-              backgroundImage: `url(${displaySprite.thumbSrc})`,
-              backgroundPosition: displaySprite.thumbPos,
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: displaySprite.thumbSize,
-            }}
+        {displayImage ? (
+          <ProductImage
+            avifSrc={displayImage.thumbAvif}
+            webpSrc={displayImage.thumbWebp}
+            alt={`${model.brandName} ${model.modelName}`}
+            className="h-full w-full object-contain"
+            sizes="(max-width: 768px) 50vw, 33vw"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-gray-300">

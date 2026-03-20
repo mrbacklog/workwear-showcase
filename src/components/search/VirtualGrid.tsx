@@ -76,7 +76,7 @@ export function VirtualGrid({ items, preferredColorCodes }: VirtualGridProps) {
   const totalHeight = rowVirtualizer.getTotalSize();
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 600px' }}>
       {/* Outer container with total virtual height */}
       <div
         style={{ height: totalHeight, position: 'relative' }}

@@ -30,8 +30,10 @@ export interface SearchDocument {
   description: string;
   /** Full category path (e.g. "Werkkleding > Broeken > Werkbroeken") */
   categoryPath: string;
-  /** Thumbnail image path for result cards */
-  thumbPath: string;
+  /** Thumbnail AVIF URL (R2 CDN) for result cards */
+  thumbAvif: string;
+  /** Thumbnail WebP URL (R2 CDN) for result cards */
+  thumbWebp: string;
   /** Full-size image path for result cards */
   imagePath: string;
   /** Lowest price in EUR cents across all variants */

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Image from 'next/image';
 import type { ShowcaseImage } from '@/types/product';
+import { ProductImage } from '@/components/ui/ProductImage';
 
 interface ProductGalleryProps {
   images: ShowcaseImage[];
@@ -13,7 +13,7 @@ export function ProductGallery({ images, selectedColor }: ProductGalleryProps) {
   // Filter images by selected color if provided, otherwise show all
   const filteredImages = useMemo(() => {
     if (!selectedColor) return images;
-    const colorImages = images.filter((img) => {
+    const colorImages = images.filter(() => {
       // Match by EAN prefix if color-grouped, otherwise show all
       return true;
     });
@@ -39,13 +39,13 @@ export function ProductGallery({ images, selectedColor }: ProductGalleryProps) {
       {/* Main image */}
       <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-50">
         {mainImage && (
-          <Image
-            src={mainImage.path}
+          <ProductImage
+            avifSrc={mainImage.thumbAvif}
+            webpSrc={mainImage.thumbWebp}
             alt="Product afbeelding"
-            width={600}
-            height={600}
             className="h-full w-full object-contain p-4"
-            priority
+            priority={true}
+            sizes="(max-width: 768px) 100vw, 50vw"
           />
         )}
       </div>
@@ -64,12 +64,12 @@ export function ProductGallery({ images, selectedColor }: ProductGalleryProps) {
                   : 'border-gray-200 hover:border-gray-400'
               }`}
             >
-              <Image
-                src={image.thumbPath}
+              <ProductImage
+                avifSrc={image.thumbAvif}
+                webpSrc={image.thumbWebp}
                 alt={`Thumbnail ${index + 1}`}
-                width={64}
-                height={64}
                 className="h-full w-full object-contain p-1"
+                sizes="64px"
               />
             </button>
           ))}

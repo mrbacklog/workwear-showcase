@@ -15,8 +15,8 @@ import { useChangeRequest } from '@/hooks/useChangeRequest';
 import { usePendingRequests } from '@/hooks/usePendingRequests';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
-import { useSpriteMap } from '@/hooks/useSpriteMap';
-import { CrossfadeSprite } from '@/components/ui/CrossfadeSprite';
+import { useImageUrl } from '@/hooks/useImageUrl';
+import { ProductImage } from '@/components/ui/ProductImage';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
 import type { ColorGroup, ShowcaseImage, ShowcaseModel } from '@/types/product';
 
@@ -27,16 +27,14 @@ import type { ColorGroup, ShowcaseImage, ShowcaseModel } from '@/types/product';
 function ProductGallery({
   images,
   modelName,
-  modelSlug,
 }: {
   images: ShowcaseImage[];
   modelName: string;
-  modelSlug: string;
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [fullLoaded, setFullLoaded] = useState(false);
-  const { getSpriteInfo } = useSpriteMap();
+  const { getOriginalImageUrl } = useImageUrl();
 
   // Reset fullLoaded when switching images
   useEffect(() => {
@@ -52,87 +50,65 @@ function ProductGallery({
   }
 
   const mainImage = images[selectedIndex] ?? images[0];
-  const mainSprite = getSpriteInfo(modelSlug, mainImage.path);
+  const originalUrl = getOriginalImageUrl(mainImage.ean, mainImage.sequenceNumber);
 
   return (
     <div className="space-y-3">
-      {/* Main image: full-size from API with sprite placeholder */}
+      {/* Main image: full-size from API with thumb placeholder */}
       <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-50">
-        {mainSprite ? (
-          <>
-            {/* Sprite as instant placeholder */}
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url(${mainSprite.fullSrc})`,
-                backgroundPosition: mainSprite.fullPos,
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: mainSprite.fullSize,
-                opacity: fullLoaded ? 0 : 1,
-                transition: 'opacity 200ms ease-out',
-              }}
-            />
-            {/* Full-size original from backend API */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={mainSprite.originalUrl}
-              alt={modelName}
-              className="absolute inset-0 h-full w-full object-contain p-4 cursor-zoom-in"
-              style={{ opacity: fullLoaded ? 1 : 0, transition: 'opacity 200ms ease-out' }}
-              onLoad={() => setFullLoaded(true)}
-              onClick={() => setLightboxUrl(mainSprite.originalUrl)}
-            />
-            {/* Zoom icon */}
-            <button
-              type="button"
-              onClick={() => setLightboxUrl(mainSprite.originalUrl)}
-              className="absolute bottom-3 right-3 rounded-full bg-white/80 p-2 text-gray-600 shadow-sm hover:bg-white hover:text-gray-900 transition-colors"
-              aria-label="Vergroot afbeelding"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-              </svg>
-            </button>
-          </>
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-gray-300">
-            Geen afbeelding
-          </div>
-        )}
+        <ProductImage
+          avifSrc={mainImage.thumbAvif}
+          webpSrc={mainImage.thumbWebp}
+          alt={modelName}
+          className={`h-full w-full object-contain transition-opacity duration-200 ${fullLoaded ? 'opacity-0' : 'opacity-100'}`}
+          priority={true}
+          sizes="(max-width: 768px) 100vw, 50vw"
+        />
+        {/* Full-size original from backend API */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={originalUrl}
+          alt={modelName}
+          className={`absolute inset-0 h-full w-full object-contain p-4 cursor-zoom-in transition-opacity duration-200 ${fullLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setFullLoaded(true)}
+          onClick={() => setLightboxUrl(originalUrl)}
+        />
+        {/* Zoom icon */}
+        <button
+          type="button"
+          onClick={() => setLightboxUrl(originalUrl)}
+          className="absolute bottom-3 right-3 rounded-full bg-white/80 p-2 text-gray-600 shadow-sm hover:bg-white hover:text-gray-900 transition-colors"
+          aria-label="Vergroot afbeelding"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          </svg>
+        </button>
       </div>
 
       {/* Thumbnail strip */}
       {images.length > 1 && (
         <div className="flex gap-2 overflow-x-auto">
-          {images.map((img, idx) => {
-            const sprite = getSpriteInfo(modelSlug, img.path);
-            return (
-              <button
-                key={`${img.ean}-${img.sequenceNumber}`}
-                type="button"
-                onClick={() => setSelectedIndex(idx)}
-                className={`h-16 w-16 shrink-0 overflow-hidden rounded border-2 transition-colors ${
-                  idx === selectedIndex
-                    ? 'border-gray-900'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                {sprite ? (
-                  <div
-                    className="h-full w-full"
-                    style={{
-                      backgroundImage: `url(${sprite.thumbSrc})`,
-                      backgroundPosition: sprite.thumbPos,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: sprite.thumbSize,
-                    }}
-                  />
-                ) : (
-                  <div className="h-full w-full bg-gray-100" />
-                )}
-              </button>
-            );
-          })}
+          {images.map((img, idx) => (
+            <button
+              key={`${img.ean}-${img.sequenceNumber}`}
+              type="button"
+              onClick={() => setSelectedIndex(idx)}
+              className={`h-16 w-16 shrink-0 overflow-hidden rounded border-2 transition-colors ${
+                idx === selectedIndex
+                  ? 'border-gray-900'
+                  : 'border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              <ProductImage
+                avifSrc={img.thumbAvif}
+                webpSrc={img.thumbWebp}
+                alt={`${modelName} afbeelding ${idx + 1}`}
+                className="h-full w-full object-contain"
+                sizes="64px"
+              />
+            </button>
+          ))}
         </div>
       )}
 
@@ -149,7 +125,7 @@ function ProductGallery({
 }
 
 // ---------------------------------------------------------------------------
-// Color Selector (thumbnail strip with hover preview)
+// Color Selector (swatch dots with hover preview)
 // ---------------------------------------------------------------------------
 
 function ColorSelector({
@@ -158,17 +134,13 @@ function ColorSelector({
   onSelect,
   onHover,
   hoveredIndex,
-  modelSlug,
 }: {
   colorGroups: ColorGroup[];
   selectedIndex: number;
   onSelect: (index: number) => void;
   onHover: (index: number | null) => void;
   hoveredIndex: number | null;
-  modelSlug: string;
 }) {
-  const { getSpriteInfo } = useSpriteMap();
-
   if (colorGroups.length <= 1) return null;
 
   const displayIndex = hoveredIndex ?? selectedIndex;
@@ -180,13 +152,11 @@ function ColorSelector({
         Kleur: {displayGroup?.colorRaw || displayGroup?.colorName}
       </h3>
       <div
-        className="mt-2 flex items-center gap-2 overflow-x-auto pb-1"
+        className="mt-2 flex items-center gap-3 overflow-x-auto pb-1"
         style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
       >
         {colorGroups.map((cg, idx) => {
           const isSelected = idx === selectedIndex;
-          const firstImg = cg.images[0];
-          const sprite = firstImg ? getSpriteInfo(modelSlug, firstImg.path) : null;
 
           return (
             <button
@@ -196,28 +166,14 @@ function ColorSelector({
               onMouseEnter={() => onHover(idx)}
               onMouseLeave={() => onHover(null)}
               title={cg.colorRaw || cg.colorName}
-              className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-gray-50 transition-all ${
-                isSelected
-                  ? 'ring-2 ring-gray-900 ring-offset-1'
-                  : 'ring-1 ring-gray-200 hover:ring-gray-400'
-              }`}
+              className="shrink-0"
             >
-              {sprite ? (
-                <div
-                  className="h-full w-full"
-                  style={{
-                    backgroundImage: `url(${sprite.thumbSrc})`,
-                    backgroundPosition: sprite.thumbPos,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: sprite.thumbSize,
-                  }}
-                />
-              ) : (
-                <span
-                  className="absolute inset-1.5 rounded-full"
-                  style={{ backgroundColor: cg.hexCode || '#cccccc' }}
-                />
-              )}
+              <ColorSwatch
+                hexCode={cg.hexCode}
+                secondaryHex={cg.secondaryHex}
+                isActive={isSelected}
+                size="md"
+              />
             </button>
           );
         })}
@@ -227,10 +183,16 @@ function ColorSelector({
 }
 
 // ---------------------------------------------------------------------------
-// Color/Size Matrix
+// Variant Info Table (selected color only)
 // ---------------------------------------------------------------------------
 
-function ColorSizeMatrix({ colorGroup }: { colorGroup: ColorGroup }) {
+function VariantInfoTable({
+  colorGroup,
+  showPrices,
+}: {
+  colorGroup: ColorGroup;
+  showPrices: boolean;
+}) {
   const [showEan, setShowEan] = useState(false);
 
   const sortedVariants = useMemo(
@@ -245,7 +207,9 @@ function ColorSizeMatrix({ colorGroup }: { colorGroup: ColorGroup }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900">Maten</h3>
+        <h3 className="text-sm font-medium text-gray-900">
+          Maten &mdash; {colorGroup.colorRaw || colorGroup.colorName}
+        </h3>
         <button
           type="button"
           onClick={() => setShowEan((v) => !v)}
@@ -266,9 +230,11 @@ function ColorSizeMatrix({ colorGroup }: { colorGroup: ColorGroup }) {
                   EAN
                 </th>
               )}
-              <th className="py-2 text-right font-medium text-gray-500">
-                Prijs
-              </th>
+              {showPrices && (
+                <th className="py-2 text-right font-medium text-gray-500">
+                  Prijs
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -280,17 +246,170 @@ function ColorSizeMatrix({ colorGroup }: { colorGroup: ColorGroup }) {
                 {showEan && (
                   <td className="py-2 pr-4 text-gray-500">{v.ean}</td>
                 )}
-                <td className="py-2 text-right text-gray-900">
-                  {v.priceCents > 0
-                    ? `${(v.priceCents / 100).toFixed(2).replace('.', ',')} EUR`
-                    : '-'}
-                </td>
+                {showPrices && (
+                  <td className="py-2 text-right text-gray-900">
+                    {v.priceCents > 0
+                      ? `\u20AC ${(v.priceCents / 100).toFixed(2).replace('.', ',')}`
+                      : '\u2014'}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Color/Size Matrix (all colors x all sizes overview)
+// ---------------------------------------------------------------------------
+
+function ColorSizeMatrix({
+  colorGroups,
+  selectedColorIndex,
+  onSelectColor,
+  showPrices,
+}: {
+  colorGroups: ColorGroup[];
+  selectedColorIndex: number;
+  onSelectColor: (index: number) => void;
+  showPrices: boolean;
+}) {
+  // Collect all unique sizes across all color groups, sorted
+  const allSizes = useMemo(() => {
+    const sizeSet = new Set<string>();
+    for (const cg of colorGroups) {
+      for (const v of cg.variants) {
+        sizeSet.add(v.sizeDisplay || v.sizeRaw);
+      }
+    }
+    return [...sizeSet].sort((a, b) => compareSizes(a, b));
+  }, [colorGroups]);
+
+  if (colorGroups.length === 0 || allSizes.length === 0) return null;
+
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-medium text-gray-900">
+        Kleur / Maat overzicht
+      </h3>
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="min-w-full text-xs">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-medium text-gray-500">
+                Kleur
+              </th>
+              {allSizes.map((size) => (
+                <th
+                  key={size}
+                  className="px-2 py-2 text-center font-medium text-gray-500 whitespace-nowrap"
+                >
+                  {size}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {colorGroups.map((cg, idx) => {
+              const isActive = idx === selectedColorIndex;
+              // Build a size -> variant lookup for this color group
+              const sizeMap = new Map<string, number>();
+              for (const v of cg.variants) {
+                const key = v.sizeDisplay || v.sizeRaw;
+                sizeMap.set(key, v.priceCents);
+              }
+
+              return (
+                <tr
+                  key={cg.colorCode || cg.colorRaw || idx}
+                  onClick={() => onSelectColor(idx)}
+                  className={`cursor-pointer transition-colors ${
+                    isActive
+                      ? 'bg-gray-100 font-medium'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <td className="sticky left-0 z-10 bg-inherit px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <ColorSwatch
+                        hexCode={cg.hexCode}
+                        secondaryHex={cg.secondaryHex}
+                        isActive={isActive}
+                        size="sm"
+                      />
+                      <span className="text-gray-900 whitespace-nowrap">
+                        {cg.colorRaw || cg.colorName}
+                      </span>
+                    </div>
+                  </td>
+                  {allSizes.map((size) => {
+                    const priceCents = sizeMap.get(size);
+                    const available = priceCents !== undefined;
+                    return (
+                      <td
+                        key={size}
+                        className={`px-2 py-2 text-center whitespace-nowrap ${
+                          available ? 'text-gray-900' : 'text-gray-300'
+                        }`}
+                      >
+                        {available
+                          ? showPrices && priceCents > 0
+                            ? `\u20AC ${(priceCents / 100).toFixed(2).replace('.', ',')}`
+                            : '\u2713'
+                          : '\u2014'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Color Swatch (reusable)
+// ---------------------------------------------------------------------------
+
+function ColorSwatch({
+  hexCode,
+  secondaryHex,
+  isActive,
+  size = 'md',
+  onClick,
+}: {
+  hexCode: string;
+  secondaryHex?: string | null;
+  isActive: boolean;
+  size?: 'sm' | 'md';
+  onClick?: () => void;
+}) {
+  const sizeClass = size === 'sm' ? 'h-4 w-4' : 'h-6 w-6';
+  const hex = hexCode || '#cccccc';
+
+  const style: React.CSSProperties = secondaryHex
+    ? { background: `linear-gradient(135deg, ${hex} 50%, ${secondaryHex} 50%)` }
+    : { backgroundColor: hex };
+
+  return (
+    <span
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
+      className={`inline-block shrink-0 rounded-full border-2 ${sizeClass} ${
+        isActive
+          ? 'border-gray-900 ring-2 ring-gray-900 ring-offset-1'
+          : 'border-gray-300'
+      } ${onClick ? 'cursor-pointer hover:border-gray-500' : ''}`}
+      style={style}
+    />
   );
 }
 
@@ -479,7 +598,6 @@ export default function ProductClient() {
           <ProductGallery
             images={currentImages}
             modelName={model.modelName || model.modelCode || ''}
-            modelSlug={model.slug}
           />
 
           {/* Right: Details */}
@@ -506,11 +624,25 @@ export default function ProductClient() {
               onSelect={handleColorSelect}
               onHover={handleColorHover}
               hoveredIndex={hoveredColorIndex}
-              modelSlug={model.slug}
             />
 
             {selectedColorGroup && (
-              <ColorSizeMatrix colorGroup={selectedColorGroup} />
+              <VariantInfoTable
+                colorGroup={selectedColorGroup}
+                showPrices={isUnlocked}
+              />
+            )}
+
+            {model.colorGroups.length > 1 && (
+              <>
+                <hr className="border-gray-200" />
+                <ColorSizeMatrix
+                  colorGroups={model.colorGroups}
+                  selectedColorIndex={selectedColorIndex}
+                  onSelectColor={handleColorSelect}
+                  showPrices={isUnlocked}
+                />
+              </>
             )}
 
             <hr className="border-gray-200" />

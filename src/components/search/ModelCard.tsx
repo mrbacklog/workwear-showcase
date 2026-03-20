@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { ShowcaseModel } from '@/types/product';
 import { formatPrice, formatPriceRange } from '@/lib/format';
 import { VariantThumbnailStrip } from '@/components/search/VariantThumbnailStrip';
-import { useSpriteMap } from '@/hooks/useSpriteMap';
+import { ProductImage } from '@/components/ui/ProductImage';
 
 interface ModelCardProps {
   model: ShowcaseModel;
@@ -14,8 +14,6 @@ interface ModelCardProps {
 
 export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [isCardHovered, setIsCardHovered] = useState(false);
-  const { getSpriteInfo, prefetchFullSprite } = useSpriteMap();
 
   const initialGroupIndex = useMemo(() => {
     if (preferredColorCodes && preferredColorCodes.size > 0) {
@@ -43,10 +41,10 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
     () =>
       model.colorGroups.map((cg) => {
         const firstImg = cg.images[0];
-        const imageKey = firstImg ? firstImg.path : null;
         return {
           code: cg.colorCode,
-          imageKey,
+          thumbAvif: firstImg?.thumbAvif ?? null,
+          thumbWebp: firstImg?.thumbWebp ?? null,
           hexCode: cg.hexCode,
           colorRaw: cg.colorRaw,
         };
@@ -57,22 +55,7 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
   // Determine which color group to display
   const displayGroupIndex = hoveredIndex ?? initialGroupIndex;
   const displayGroup = model.colorGroups[displayGroupIndex];
-  // Get sprite info for the display image
-  const displaySprite = useMemo(() => {
-    if (!displayGroup || displayGroup.images.length === 0) return null;
-    const firstImg = displayGroup.images[0];
-    return getSpriteInfo(model.slug, firstImg.path);
-  }, [displayGroup, model.slug, getSpriteInfo]);
-
-  // Prefetch full sprite on card hover
-  const handleCardEnter = useCallback(() => {
-    setIsCardHovered(true);
-    prefetchFullSprite(model.slug);
-  }, [model.slug, prefetchFullSprite]);
-
-  const handleCardLeave = useCallback(() => {
-    setIsCardHovered(false);
-  }, []);
+  const displayImage = displayGroup?.images[0] ?? null;
 
   // Build link URL: use colorRaw (unique per model) instead of colorCode (may have duplicates)
   const linkHref = useMemo(() => {
@@ -83,27 +66,25 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
     return `/product/${model.slug}/`;
   }, [hoveredIndex, initialGroupIndex, model.slug, model.colorGroups]);
 
+  const handleCardLeave = useCallback(() => {
+    // no-op: kept for semantic clarity
+  }, []);
+
   return (
     <Link
       href={linkHref}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 hover:shadow-lg hover:border-gray-300"
-      onMouseEnter={handleCardEnter}
       onMouseLeave={handleCardLeave}
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-50">
-        {displaySprite ? (
-          <div
-            role="img"
-            aria-label={`${model.brandName} ${model.modelName}`}
-            className="h-full w-full transition-transform duration-300 ease-out"
-            style={{
-              backgroundImage: `url(${displaySprite.thumbSrc})`,
-              backgroundPosition: displaySprite.thumbPos,
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: displaySprite.thumbSize,
-              transform: isCardHovered ? 'scale(1.05)' : 'scale(1)',
-            }}
+        {displayImage ? (
+          <ProductImage
+            avifSrc={displayImage.thumbAvif}
+            webpSrc={displayImage.thumbWebp}
+            alt={`${model.brandName} ${model.modelName}`}
+            className="h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-gray-300">
@@ -132,7 +113,6 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
           {variantThumbs.length > 1 && (
             <VariantThumbnailStrip
               variants={variantThumbs}
-              modelSlug={model.slug}
               onHover={setHoveredIndex}
               activeIndex={hoveredIndex}
             />

@@ -17,11 +17,12 @@
  */
 
 import * as fs from 'fs/promises';
+import { readdirSync, existsSync } from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import MiniSearch from 'minisearch';
-import { generateBrandSprites } from './generate-sprites';
-import type { BrandSpriteModel } from './generate-sprites';
+import { r2Upload, loadUploadManifest, saveUploadManifest } from './r2-upload';
+import { generateThumbnails } from './generate-thumbnails';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -35,13 +36,14 @@ const API_PREFIX = '/api/v1/distribution/showcase';
 // All images (full + thumbs) are downloaded to public/images/ and served from Cloudflare CDN
 const IMAGE_BASE_URL = process.env.IMAGE_BASE_URL ?? `${BACKEND_URL}${API_PREFIX}/image`;
 
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
+
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
 const DATA_DIR = path.join(PUBLIC_DIR, 'data');
 const THUMBS_DIR = path.join(PUBLIC_DIR, 'images', 'thumbs');
 const FULL_DIR = path.join(PUBLIC_DIR, 'images', 'full');
-const SPRITES_DIR = path.join(PUBLIC_DIR, 'images', 'sprites');
-const SPRITE_MAP_PATH = path.join(DATA_DIR, 'sprite-map.json');
+const THUMBS_OUTPUT_DIR = path.join(process.cwd(), '.thumb-cache');
 const IMAGE_CONCURRENCY = 50;
 
 // ---------------------------------------------------------------------------
@@ -127,16 +129,7 @@ interface ShowcaseChangeReport {
   dataFingerprint: string;
 }
 
-// Frontend model shape (camelCase, with image paths)
-
-interface FrontendImageSprite {
-  thumbSrc: string;
-  fullSrc: string;
-  col: number;
-  row: number;
-  cols: number;
-  rows: number;
-}
+// Frontend model shape (camelCase, with R2 image URLs)
 
 interface FrontendColorGroup {
   colorRaw: string;
@@ -156,8 +149,8 @@ interface FrontendColorGroup {
     sequenceNumber: number;
     imageType: string;
     path: string;
-    thumbPath: string;
-    sprite?: FrontendImageSprite;
+    thumbAvif: string;
+    thumbWebp: string;
   }[];
 }
 
@@ -206,7 +199,7 @@ interface SearchDocument {
   keywords: string;
   description: string;
   categoryPath: string;
-  thumbPath: string;
+  thumbAvif: string;
   imagePath: string;
   minPrice: number;
   publicationStatus: string;
@@ -504,7 +497,52 @@ function transformCategory(cat: ShowcaseCategory): FrontendCategory {
   };
 }
 
+const IMAGE_TYPE_PRIORITY: Record<string, number> = {
+  front: 0,
+  lifestyle: 1,
+  default: 2,
+  side: 3,
+  back: 4,
+  detail: 5,
+};
+
 function transformModel(model: ShowcaseModel): FrontendModel {
+  const colorGroups = model.colorGroups.map((cg) => ({
+    colorRaw: cg.colorRaw,
+    colorCode: cg.colorCode ?? '',
+    colorName: cg.colorName ?? '',
+    hexCode: cg.hexCode ?? '',
+    secondaryHex: cg.secondaryHex,
+    secondaryName: cg.secondaryName,
+    variants: cg.variants.map((v) => ({
+      ean: v.ean,
+      sizeRaw: v.sizeRaw,
+      sizeDisplay: v.sizeDisplay ?? v.sizeRaw,
+      priceCents: v.priceCents ?? 0,
+    })),
+    images: cg.images.map((img) => {
+      const key = `${img.ean}-${img.sequenceNumber}`;
+      return {
+        ean: img.ean,
+        sequenceNumber: img.sequenceNumber,
+        imageType: img.imageType ?? 'front',
+        path: key,
+        thumbAvif: `${R2_PUBLIC_URL}/300/${key}.avif`,
+        thumbWebp: `${R2_PUBLIC_URL}/300/${key}.webp`,
+      };
+    }),
+  }));
+
+  // Sort images within each color group so hero (front-view) is always first
+  for (const cg of colorGroups) {
+    cg.images.sort((a, b) => {
+      const pa = IMAGE_TYPE_PRIORITY[a.imageType] ?? 99;
+      const pb = IMAGE_TYPE_PRIORITY[b.imageType] ?? 99;
+      if (pa !== pb) return pa - pb;
+      return a.sequenceNumber - b.sequenceNumber;
+    });
+  }
+
   return {
     id: String(model.id),
     slug: model.slug,
@@ -518,89 +556,8 @@ function transformModel(model: ShowcaseModel): FrontendModel {
     shortDescriptionNl: model.shortDescriptionNl ?? '',
     publicationStatus: model.publicationStatus,
     variantCount: model.variantCount,
-    colorGroups: model.colorGroups.map((cg) => ({
-      colorRaw: cg.colorRaw,
-      colorCode: cg.colorCode ?? '',
-      colorName: cg.colorName ?? '',
-      hexCode: cg.hexCode ?? '',
-      secondaryHex: cg.secondaryHex,
-      secondaryName: cg.secondaryName,
-      variants: cg.variants.map((v) => ({
-        ean: v.ean,
-        sizeRaw: v.sizeRaw,
-        sizeDisplay: v.sizeDisplay ?? v.sizeRaw,
-        priceCents: v.priceCents ?? 0,
-      })),
-      images: cg.images.map((img) => ({
-        ean: img.ean,
-        sequenceNumber: img.sequenceNumber,
-        imageType: img.imageType ?? 'front',
-        // Sprite key for runtime lookup via sprite-map.json
-        path: `${img.ean}-${img.sequenceNumber}`,
-        thumbPath: `${img.ean}-${img.sequenceNumber}`,
-      })),
-    })),
+    colorGroups,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Sprite embedding: inline sprite coordinates into model-cards
-// ---------------------------------------------------------------------------
-
-interface SpriteMapEntry {
-  t: string;
-  f: string;
-  cols: number;
-  rows: number;
-  img: Record<string, [number, number]>;
-}
-
-interface SpriteMapFile {
-  thumbCell: number;
-  fullCell: number;
-  cols: number;
-  imageBase: string;
-  models: Record<string, SpriteMapEntry>;
-}
-
-/**
- * Embed sprite coordinates from sprite-map.json directly into each image
- * within the model-cards. This eliminates the need to load sprite-map.json
- * at runtime for images that have been embedded.
- */
-function embedSpriteInfoIntoModels(
-  models: FrontendModel[],
-  spriteMap: SpriteMapFile,
-): FrontendModel[] {
-  return models.map((model) => {
-    const spriteEntry = spriteMap.models[model.slug];
-    if (!spriteEntry) return model;
-
-    return {
-      ...model,
-      colorGroups: model.colorGroups.map((cg) => ({
-        ...cg,
-        images: cg.images.map((img) => {
-          const imageKey = img.path; // path = "ean-seq" sprite key
-          const pos = spriteEntry.img[imageKey];
-          if (!pos) return img;
-
-          const [col, row] = pos;
-          return {
-            ...img,
-            sprite: {
-              thumbSrc: spriteEntry.t,
-              fullSrc: spriteEntry.f,
-              col,
-              row,
-              cols: spriteEntry.cols,
-              rows: spriteEntry.rows,
-            },
-          };
-        }),
-      })),
-    };
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -629,7 +586,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
       'keywords',
       'description',
       'categoryPath',
-      'thumbPath',
+      'thumbAvif',
       'imagePath',
       'minPrice',
       'publicationStatus',
@@ -650,20 +607,20 @@ function buildSearchIndex(models: FrontendModel[]): string {
   });
 
   const documents: SearchDocument[] = models.map((model) => {
-    // Find first thumb path and full image path
-    let thumbPath = '';
+    // Find first thumb AVIF URL and full image path key
+    let thumbAvif = '';
     let imagePath = '';
     for (const cg of model.colorGroups) {
       for (const img of cg.images) {
-        if (img.thumbPath && !thumbPath) {
-          thumbPath = img.thumbPath;
+        if (img.thumbAvif && !thumbAvif) {
+          thumbAvif = img.thumbAvif;
         }
         if (img.path && !imagePath) {
           imagePath = img.path;
         }
-        if (thumbPath && imagePath) break;
+        if (thumbAvif && imagePath) break;
       }
-      if (thumbPath && imagePath) break;
+      if (thumbAvif && imagePath) break;
     }
 
     // Find minimum price
@@ -696,7 +653,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
       keywords,
       description: model.shortDescriptionNl,
       categoryPath: model.categoryPath,
-      thumbPath,
+      thumbAvif,
       imagePath,
       minPrice,
       publicationStatus: model.publicationStatus,
@@ -1082,51 +1039,15 @@ async function main(): Promise<void> {
     allModels = exportedModels;
   }
 
-  // Step 4: Brand-grouped sprite generation (incremental via per-brand fingerprinting)
-  const spriteMapExists = await fs.access(SPRITE_MAP_PATH).then(() => true).catch(() => false);
-  const c = changeReport.changes;
-  const needsSpriteRegen = FLAG_FORCE
-    || !spriteMapExists
-    || !metaExists
-    || c.imagesChanged > 0
-    || c.modelsAdded > 0
-    || c.modelsRemoved > 0;
-
+  // Step 4: Download source images (needed for thumbnail generation)
   const allImageTargets = collectAllImageTargets(allModels);
 
-  if (!needsSpriteRegen) {
-    // Data-only sync: skip image downloads + sprite generation entirely
-    log('No image changes detected — reusing existing sprites (skipping download + generation)');
-  } else {
-    // Download all images needed for sprites
-    // Always download all images so cached source files are available for sprite generation
-    if (allImageTargets.length > 0) {
-      log(`Downloading ${allImageTargets.length} images (thumbs + full)...`);
-      await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-      await downloadImages(allImageTargets, FULL_DIR, 'full', 'Full');
-    }
-
-    // Generate brand-grouped sprites (incremental: only changed brands regenerate)
-    const brandSpriteModels: BrandSpriteModel[] = allModels.map((m) => ({
-      slug: m.slug,
-      brandSlug: m.brandSlug,
-      colorGroups: m.colorGroups,
-    }));
-
-    log(`Generating brand-grouped sprites for ${allModels.length} models (incremental)...`);
-    await generateBrandSprites(
-      brandSpriteModels,
-      THUMBS_DIR,
-      FULL_DIR,
-      SPRITES_DIR,
-      SPRITE_MAP_PATH,
-      IMAGE_BASE_URL,
-      log,
-      FLAG_FORCE,
-    );
+  if (allImageTargets.length > 0) {
+    log(`Downloading ${allImageTargets.length} source images (thumbs)...`);
+    await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
   }
 
-  // Clean up stale individual image files (keep valid ones as download cache)
+  // Clean up stale individual source image files (keep valid ones as download cache)
   const validImageFiles = new Set(allImageTargets.map((t) => t.fileName));
   const staleThumbsRemoved = await cleanStaleImages(THUMBS_DIR, validImageFiles);
   const staleFullRemoved = await cleanStaleImages(FULL_DIR, validImageFiles);
@@ -1134,22 +1055,45 @@ async function main(): Promise<void> {
     log(`  Cleaned up ${staleThumbsRemoved} stale thumbs, ${staleFullRemoved} stale full images`);
   }
 
-  // Step 4b: Embed sprite info into model-cards (if sprite-map.json is available)
-  let modelsWithSprites = allModels;
-  try {
-    const spriteMapRaw = await fs.readFile(SPRITE_MAP_PATH, 'utf-8');
-    const spriteMapData = JSON.parse(spriteMapRaw) as SpriteMapFile;
-    modelsWithSprites = embedSpriteInfoIntoModels(allModels, spriteMapData);
-    const embeddedCount = modelsWithSprites.filter((m) =>
-      m.colorGroups.some((cg) => cg.images.some((img) => img.sprite))
-    ).length;
-    log(`Embedded sprite info into ${embeddedCount}/${modelsWithSprites.length} models`);
-  } catch {
-    log('No sprite-map.json available — skipping sprite embedding');
+  // --- Generate thumbnails + upload to R2 ---
+  log('Generating thumbnails (300w + 600w AVIF/WebP)...');
+  const allImageKeys = allImageTargets.map(t => `${t.ean}-${t.seq}`);
+
+  const thumbResults = await generateThumbnails(
+    allImageKeys,
+    THUMBS_DIR,       // source directory with downloaded .webp files
+    THUMBS_OUTPUT_DIR,
+    log,
+    30,
+  );
+
+  // --- Upload to R2 (incremental, save manifest per batch) ---
+  log('Uploading thumbnails to R2...');
+  const manifest = loadUploadManifest();
+  let uploaded = 0;
+  let skipped = 0;
+
+  for (const thumb of thumbResults) {
+    for (const file of thumb.files) {
+      if (!manifest.uploadedKeys.has(file.r2Key)) {
+        await r2Upload(file.r2Key, file.localPath, file.contentType);
+        manifest.uploadedKeys.add(file.r2Key);
+        uploaded++;
+      } else {
+        skipped++;
+      }
+    }
+    // Save manifest periodically (crash recovery)
+    if (uploaded % 100 === 0 && uploaded > 0) {
+      saveUploadManifest(manifest);
+    }
   }
+  saveUploadManifest(manifest);
+
+  log(`R2 upload complete: ${uploaded} uploaded, ${skipped} skipped (already exist)`);
 
   // Step 5: Build search index (always from full model set)
-  const searchIndex = buildSearchIndex(modelsWithSprites);
+  const searchIndex = buildSearchIndex(allModels);
 
   // Step 6: Write output files
   const totalImages = allModels.reduce((sum, m) =>
@@ -1157,7 +1101,7 @@ async function main(): Promise<void> {
 
   const imageFileNames = allImageTargets.map((t) => t.fileName);
   await writeDataFiles(
-    modelsWithSprites,
+    allModels,
     frontendCategories,
     searchIndex,
     imageFileNames,
@@ -1180,12 +1124,40 @@ async function main(): Promise<void> {
   log(`=== Sync completed in ${(durationMs / 1000).toFixed(1)}s ===`);
   log(`  Mode:   ${isIncremental ? 'incremental' : 'full'}`);
   log(`  Models: ${allModels.length} (${exportedModels.length} exported)`);
-  log(`  Images: ${totalImages} (${imageFileNames.length} image files, sprites: ${needsSpriteRegen ? 'regenerated' : 'reused'})`);
+  log(`  Images: ${totalImages} (${imageFileNames.length} image files, R2: ${uploaded} uploaded, ${skipped} skipped)`);
   log(`  Index:  ${(searchIndex.length / 1024).toFixed(0)} KB`);
 
   // Step 8 (optional): Build
   if (FLAG_BUILD || FLAG_DEPLOY) {
     runBuild();
+
+    // File count monitoring — Cloudflare Pages limit is 20,000 files
+    function countFilesRecursive(dir: string): number {
+      let count = 0;
+      const entries = readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          count += countFilesRecursive(path.join(dir, entry.name));
+        } else {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    if (existsSync('out')) {
+      const fileCount = countFilesRecursive('out');
+      const WARN_THRESHOLD = 18000;
+      const ERROR_THRESHOLD = 19500;
+      if (fileCount > ERROR_THRESHOLD) {
+        log(`CRITICAL: ${fileCount} files exceeds Cloudflare limit (20,000)`);
+        process.exit(1);
+      } else if (fileCount > WARN_THRESHOLD) {
+        log(`WARNING: ${fileCount} files approaching Cloudflare limit (20,000)`);
+      } else {
+        log(`File count: ${fileCount} (well within 20,000 limit)`);
+      }
+    }
   }
 
   // Step 9 (optional): Deploy

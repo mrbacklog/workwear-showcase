@@ -1,0 +1,21 @@
+# R2 CDN images (served from workwear-images.databiz.app, not from Pages)
+# No headers needed for R2 — R2 upload sets Cache-Control: public, max-age=31536000, immutable
+
+# Static data files
+/data/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+# Search index (changes on sync)
+/data/search-index.json
+  Cache-Control: public, max-age=1800, stale-while-revalidate=3600
+
+# Pages assets (JS, CSS) — already hashed by Next.js
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML pages — short cache, always revalidate
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin

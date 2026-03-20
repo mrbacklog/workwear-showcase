@@ -105,7 +105,8 @@ interface FrontendColorGroup {
     sequenceNumber: number;
     imageType: string;
     path: string;
-    thumbPath: string;
+    thumbAvif: string;
+    thumbWebp: string;
   }[];
 }
 
@@ -190,7 +191,8 @@ function transformModel(model: ShowcaseModel): FrontendModel {
         sequenceNumber: img.sequenceNumber,
         imageType: img.imageType ?? 'front',
         path: `${img.ean}-${img.sequenceNumber}`,
-        thumbPath: `${img.ean}-${img.sequenceNumber}`,
+        thumbAvif: `https://workwear-images.databiz.app/300/${img.ean}-${img.sequenceNumber}.avif`,
+        thumbWebp: `https://workwear-images.databiz.app/300/${img.ean}-${img.sequenceNumber}.webp`,
       })),
     })),
   };
@@ -370,7 +372,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
     fields: ['name', 'brand', 'keywords', 'articleNumber', 'description', 'categoryPath'],
     storeFields: [
       'id', 'slug', 'name', 'brand', 'brandSlug', 'articleNumber',
-      'keywords', 'description', 'categoryPath', 'thumbPath', 'imagePath',
+      'keywords', 'description', 'categoryPath', 'thumbAvif', 'thumbWebp', 'imagePath',
       'minPrice', 'publicationStatus',
     ],
     searchOptions: {
@@ -382,15 +384,17 @@ function buildSearchIndex(models: FrontendModel[]): string {
   });
 
   const documents = models.map((model) => {
-    let thumbPath = '';
+    let thumbAvif = '';
+    let thumbWebp = '';
     let imagePath = '';
     for (const cg of model.colorGroups) {
       for (const img of cg.images) {
-        if (img.thumbPath && !thumbPath) thumbPath = img.thumbPath;
+        if (img.thumbAvif && !thumbAvif) thumbAvif = img.thumbAvif;
+        if (img.thumbWebp && !thumbWebp) thumbWebp = img.thumbWebp;
         if (img.path && !imagePath) imagePath = img.path;
-        if (thumbPath && imagePath) break;
+        if (thumbAvif && imagePath) break;
       }
-      if (thumbPath && imagePath) break;
+      if (thumbAvif && imagePath) break;
     }
 
     let minPrice = Infinity;
@@ -414,7 +418,8 @@ function buildSearchIndex(models: FrontendModel[]): string {
       keywords,
       description: model.shortDescriptionNl || model.descriptionNl,
       categoryPath: model.categoryPath,
-      thumbPath,
+      thumbAvif,
+      thumbWebp,
       imagePath,
       minPrice,
       publicationStatus: model.publicationStatus,
@@ -481,15 +486,6 @@ async function main() {
     totalImages: 0,
   };
 
-  // Build sprite-map (empty for sample — no real sprites)
-  const spriteMap = {
-    thumbCell: 64,
-    fullCell: 400,
-    fullCols: 5,
-    imageBase: 'https://api.databiz.app/api/v1/distribution/showcase/image',
-    models: {} as Record<string, unknown>,
-  };
-
   // Write files
   await fs.mkdir(FIXTURES_DIR, { recursive: true });
 
@@ -518,11 +514,6 @@ async function main() {
     JSON.stringify(manifest, null, 2),
   );
 
-  await fs.writeFile(
-    path.join(FIXTURES_DIR, 'sprite-map.json'),
-    JSON.stringify(spriteMap),
-  );
-
   console.log(`\nFixtures written to ${FIXTURES_DIR}/`);
   console.log('Files:');
   console.log(`  model-cards-0.json (${frontendModels.length} models)`);
@@ -530,7 +521,6 @@ async function main() {
   console.log(`  category-tree.json (${filteredTree.length} top-level categories)`);
   console.log('  search-index.json');
   console.log('  sync-manifest.json');
-  console.log('  sprite-map.json');
   console.log('\nDone! Run "npm run dev:offline" to test.');
 }
 

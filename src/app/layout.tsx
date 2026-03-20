@@ -27,7 +27,7 @@ export default function RootLayout({
         <link rel="prefetch" href="/data/search-index.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/model-cards-meta.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/category-tree.json" as="fetch" crossOrigin="anonymous" />
-        <link rel="preload" href="/data/sprite-map.json" as="fetch" crossOrigin="anonymous" />
+
         <style>{`
           @keyframes page-load-progress {
             0%   { transform: translateX(-100%); }

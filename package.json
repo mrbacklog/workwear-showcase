@@ -17,6 +17,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1013.0",
     "@tanstack/react-virtual": "^3.11.2",
     "minisearch": "^7.1.1",
     "next": "^15.3.0",

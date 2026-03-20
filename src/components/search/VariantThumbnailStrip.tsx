@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { useSpriteMap } from '@/hooks/useSpriteMap';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { ProductImage } from '@/components/ui/ProductImage';
 
 interface VariantThumb {
   code: string;
-  imageKey: string | null;
+  thumbAvif: string | null;
+  thumbWebp: string | null;
   hexCode: string;
   colorRaw?: string;
 }
 
 interface VariantThumbnailStripProps {
   variants: VariantThumb[];
-  modelSlug: string;
   onHover?: (index: number | null) => void;
   activeIndex?: number | null;
 }
@@ -32,8 +32,7 @@ function snap(offset: number): number {
   return Math.round(offset / STEP) * STEP;
 }
 
-export function VariantThumbnailStrip({ variants, modelSlug, onHover, activeIndex }: VariantThumbnailStripProps) {
-  const { getSpriteInfo } = useSpriteMap();
+export function VariantThumbnailStrip({ variants, onHover, activeIndex }: VariantThumbnailStripProps) {
   const [offset, setOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const rafRef = useRef<number | null>(null);
@@ -152,11 +151,6 @@ export function VariantThumbnailStrip({ variants, modelSlug, onHover, activeInde
         >
           {variants.map((v, i) => {
             const isActive = activeIndex === i;
-            // Determine which thumbnails are within or adjacent to the visible window.
-            // We use the snapped offset position to decide — thumbnails outside the
-            // ±1 buffer range skip the sprite lookup to reduce paint work.
-            const snappedIndex = Math.round(offset / STEP);
-            const isVisible = i >= snappedIndex - 1 && i < snappedIndex + MAX_VISIBLE + 1;
             return (
               <button
                 key={`${v.code}-${i}`}
@@ -169,37 +163,17 @@ export function VariantThumbnailStrip({ variants, modelSlug, onHover, activeInde
                 onMouseLeave={() => onHover?.(null)}
                 aria-label={`Kleur ${v.colorRaw || v.code}`}
               >
-                {(() => {
-                  if (!isVisible) {
-                    // Offscreen: render colour swatch only, skip sprite fetch
-                    return (
-                      <span
-                        className="absolute inset-1 rounded-full"
-                        style={{ backgroundColor: v.hexCode }}
-                      />
-                    );
-                  }
-                  const sprite = v.imageKey ? getSpriteInfo(modelSlug, v.imageKey) : null;
-                  if (sprite) {
-                    return (
-                      <div
-                        className="h-full w-full"
-                        style={{
-                          backgroundImage: `url(${sprite.thumbSrc})`,
-                          backgroundPosition: sprite.thumbPos,
-                          backgroundRepeat: 'no-repeat',
-                          backgroundSize: sprite.thumbSize,
-                        }}
-                      />
-                    );
-                  }
-                  return (
-                    <span
-                      className="absolute inset-1 rounded-full"
-                      style={{ backgroundColor: v.hexCode }}
-                    />
-                  );
-                })()}
+                {v.thumbAvif ? (
+                  <ProductImage
+                    avifSrc={v.thumbAvif}
+                    webpSrc={v.thumbWebp!}
+                    alt={v.colorRaw || v.code}
+                    className="h-full w-full object-contain rounded"
+                    sizes="36px"
+                  />
+                ) : (
+                  <span className="block h-full w-full rounded-full" style={{ backgroundColor: v.hexCode }} />
+                )}
               </button>
             );
           })}
