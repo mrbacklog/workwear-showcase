@@ -54,7 +54,7 @@ jobs:
           path: |
             public/images/thumbs
             public/images/full
-          key: showcase-dl-cache-${{ github.run_id }}
+          key: showcase-dl-cache-v1
           restore-keys: |
             showcase-dl-cache-
 
@@ -64,7 +64,7 @@ jobs:
           path: |
             public/images/sprites
             public/data
-          key: showcase-data-${{ github.run_id }}
+          key: showcase-data-v1
           restore-keys: |
             showcase-data-
 
@@ -87,7 +87,7 @@ jobs:
           path: |
             public/images/thumbs
             public/images/full
-          key: showcase-dl-cache-${{ github.run_id }}
+          key: showcase-dl-cache-v1
 
       - name: Remove individual images before build
         if: github.event.inputs.code_only != 'true'

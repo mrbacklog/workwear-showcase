@@ -42,7 +42,7 @@ const THUMBS_DIR = path.join(PUBLIC_DIR, 'images', 'thumbs');
 const FULL_DIR = path.join(PUBLIC_DIR, 'images', 'full');
 const SPRITES_DIR = path.join(PUBLIC_DIR, 'images', 'sprites');
 const SPRITE_MAP_PATH = path.join(DATA_DIR, 'sprite-map.json');
-const IMAGE_CONCURRENCY = 20;
+const IMAGE_CONCURRENCY = 50;
 
 // ---------------------------------------------------------------------------
 // Types (matching backend Pydantic schemas)
