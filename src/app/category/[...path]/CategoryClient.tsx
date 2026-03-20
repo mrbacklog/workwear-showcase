@@ -53,10 +53,10 @@ function ProductCard({ model }: { model: ShowcaseModel }) {
             aria-label={model.modelName || model.modelCode || ''}
             className="h-full w-full"
             style={{
-              backgroundImage: `url(${displaySprite.fullSrc})`,
-              backgroundPosition: displaySprite.fullPos,
+              backgroundImage: `url(${displaySprite.thumbSrc})`,
+              backgroundPosition: displaySprite.thumbPos,
               backgroundRepeat: 'no-repeat',
-              backgroundSize: displaySprite.fullSize,
+              backgroundSize: displaySprite.thumbSize,
             }}
           />
         ) : (
