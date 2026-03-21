@@ -9,6 +9,17 @@ interface ProductImageProps {
   onLoad?: () => void;
 }
 
+/**
+ * Build srcSet with 300w and 600w variants.
+ * Input: "https://cdn/300/ean-1.avif" → "https://cdn/300/ean-1.avif 300w, https://cdn/600/ean-1.avif 600w"
+ */
+function buildSrcSet(src: string): string {
+  // src is like https://workwear-images.databiz.app/300/ean-seq.ext
+  const src600 = src.replace('/300/', '/600/');
+  if (src600 === src) return src; // fallback if no /300/ in path
+  return `${src} 300w, ${src600} 600w`;
+}
+
 export function ProductImage({
   avifSrc,
   webpSrc,
@@ -21,7 +32,8 @@ export function ProductImage({
 }: ProductImageProps) {
   return (
     <picture>
-      <source type="image/avif" srcSet={avifSrc} sizes={sizes} />
+      <source type="image/avif" srcSet={buildSrcSet(avifSrc)} sizes={sizes} />
+      <source type="image/webp" srcSet={buildSrcSet(webpSrc)} sizes={sizes} />
       <img
         src={webpSrc}
         alt={alt}

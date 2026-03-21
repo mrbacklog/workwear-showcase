@@ -7,7 +7,7 @@
  * Columns are calculated from container width to match Tailwind responsive grid:
  *   - < 640px  (mobile)  → 2 columns  (grid-cols-2)
  *   - ≥ 640px  (sm)      → 3 columns  (sm:grid-cols-3)
- *   - ≥ 1280px (xl)      → 4 columns  (xl:grid-cols-4)
+ *   - ≥ 1024px (lg)      → 4 columns  (lg:grid-cols-4)
  */
 
 import { useRef, useState, useEffect, useCallback } from 'react';
@@ -20,7 +20,7 @@ const ESTIMATED_ROW_HEIGHT = 350; // approximate ModelCard height
 const OVERSCAN = 3;
 
 function getColumnCount(width: number): number {
-  if (width >= 1280) return 4;
+  if (width >= 1024) return 4;
   if (width >= 640) return 3;
   return 2;
 }

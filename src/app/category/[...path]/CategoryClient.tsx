@@ -230,7 +230,7 @@ export default function CategoryClient() {
               <div className="animate-pulse">
                 <div className="h-4 w-48 rounded bg-gray-100" />
                 <div className="mt-4 h-8 w-64 rounded bg-gray-100" />
-                <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="aspect-[3/4] rounded-lg bg-gray-100" />
                   ))}
@@ -286,7 +286,7 @@ export default function CategoryClient() {
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                  <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                     {categoryModels.map((model) => (
                       <ProductCard key={model.slug} model={model} />
                     ))}
