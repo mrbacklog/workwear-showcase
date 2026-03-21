@@ -8,6 +8,7 @@
  *   - < 640px  (mobile)  → 2 columns  (grid-cols-2)
  *   - ≥ 640px  (sm)      → 3 columns  (sm:grid-cols-3)
  *   - ≥ 1024px (lg)      → 4 columns  (lg:grid-cols-4)
+ *   - ≥ 1440px (xl)      → 5 columns
  */
 
 import { useRef, useState, useEffect, useCallback } from 'react';
@@ -20,6 +21,7 @@ const ESTIMATED_ROW_HEIGHT = 350; // approximate ModelCard height
 const OVERSCAN = 3;
 
 function getColumnCount(width: number): number {
+  if (width >= 1440) return 5;
   if (width >= 1024) return 4;
   if (width >= 640) return 3;
   return 2;

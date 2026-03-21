@@ -21,7 +21,7 @@ import type { ColorInfo } from '@/components/search/ColorFilter';
 
 const SkeletonGrid = memo(function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
       {Array.from({ length: 12 }).map((_, i) => (
         <div key={i} className="animate-pulse rounded-lg border border-gray-100 bg-white">
           <div className="aspect-square bg-gray-100" />
@@ -303,7 +303,7 @@ function SearchPageContent() {
     <>
       <Header searchValue={headerValue} onSearchChange={handleSearchChange} onSearchFocus={activate} />
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         {/* Horizontal brand bar — single row, no search */}
         <div className="mb-6">
           <BrandFilter

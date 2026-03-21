@@ -537,7 +537,7 @@ export default function ProductClient() {
     return (
       <>
         <Header searchValue={headerSearch} onSearchChange={handleSearchChange} />
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
           <div className="animate-pulse">
             <div className="h-6 w-32 rounded bg-gray-100" />
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
@@ -558,7 +558,7 @@ export default function ProductClient() {
     return (
       <>
         <Header searchValue={headerSearch} onSearchChange={handleSearchChange} />
-        <div className="mx-auto max-w-7xl px-4 py-24 text-center sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1600px] px-4 py-24 text-center sm:px-6 lg:px-8">
           <h1 className="text-2xl font-bold text-gray-900">
             Product niet gevonden
           </h1>
@@ -583,7 +583,7 @@ export default function ProductClient() {
     <>
       <Header searchValue={headerSearch} onSearchChange={handleSearchChange} />
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         {/* Back link */}
         <button onClick={handleBack} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

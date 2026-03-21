@@ -41,7 +41,7 @@ export function Header({
         scrolled ? 'shadow-sm border-b border-gray-200' : 'border-b border-gray-100'
       }`}
     >
-      <div className="mx-auto flex h-full max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-full max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:px-8">
         {/* Logo / Brand */}
         <Link
           href="/"
