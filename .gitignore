@@ -21,3 +21,4 @@ public/images/full/
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+.env
