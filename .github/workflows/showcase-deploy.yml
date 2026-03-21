@@ -8,16 +8,18 @@ on:
   # Manual trigger from GitHub UI
   workflow_dispatch:
     inputs:
-      force:
-        description: 'Force full sync (skip change detection)'
+      mode:
+        description: 'Sync mode'
         required: false
-        default: 'false'
+        default: 'full'
         type: choice
         options:
-          - 'false'
-          - 'true'
-      code_only:
-        description: 'Code-only deploy (skip sync, use cached data)'
+          - 'full'
+          - 'data'
+          - 'images'
+          - 'deploy'
+      force:
+        description: 'Force full sync (skip change detection)'
         required: false
         default: 'false'
         type: choice
@@ -29,11 +31,22 @@ on:
   repository_dispatch:
     types: [showcase-sync]
 
+# Resolve sync mode from different trigger sources
+env:
+  SYNC_MODE: ${{ github.event.client_payload.mode || github.event.inputs.mode || 'full' }}
+
 jobs:
-  sync-and-deploy:
-    name: Sync & Deploy Showcase
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Sync product data from backend API
+  # ─────────────────────────────────────────────────────────────
+  sync-data:
+    name: Sync Data
+    if: contains(fromJSON('["full","data"]'), github.event.client_payload.mode || github.event.inputs.mode || 'full')
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 30
+    outputs:
+      has_data: ${{ steps.check-data.outputs.has_data }}
+      models: ${{ steps.check-data.outputs.models }}
 
     steps:
       - name: Checkout code
@@ -50,28 +63,20 @@ jobs:
       - name: Restore data cache
         uses: actions/cache/restore@v4
         with:
-          path: |
-            public/data
-            .r2-manifest.json
-          key: showcase-data-v2-${{ github.sha }}
-          restore-keys: |
-            showcase-data-v2-
+          path: public/data
+          key: showcase-data-v3-${{ github.sha }}
+          restore-keys: showcase-data-v3-
 
-      - name: Sync product data from backend
-        if: github.event.inputs.code_only != 'true'
+      - name: Sync product data (skip images)
         run: |
           FORCE_FLAG=""
           if [ "${{ github.event.inputs.force || 'false' }}" = "true" ]; then
             FORCE_FLAG="--force"
           fi
-          npx tsx scripts/sync-products.ts $FORCE_FLAG
+          npx tsx scripts/sync-products.ts --skip-images $FORCE_FLAG
         env:
           BACKEND_URL: https://api.databiz.app
           AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
 
       - name: Check if data was synced
@@ -84,7 +89,128 @@ jobs:
             echo "Synced $MODEL_COUNT models"
           else
             echo "has_data=false" >> $GITHUB_OUTPUT
-            echo "No data synced - skipping deploy"
+            echo "No data synced"
+          fi
+
+      - name: Save data cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: public/data
+          key: showcase-data-v3-${{ github.sha }}
+
+      - name: Upload data artifact
+        if: steps.check-data.outputs.has_data == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: showcase-data
+          path: public/data/
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Generate thumbnails and upload to R2 CDN
+  # ─────────────────────────────────────────────────────────────
+  sync-images:
+    name: Sync Images
+    if: contains(fromJSON('["full","images"]'), github.event.client_payload.mode || github.event.inputs.mode || 'full')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Restore data cache (for image list)
+        uses: actions/cache/restore@v4
+        with:
+          path: public/data
+          key: showcase-data-v3-${{ github.sha }}
+          restore-keys: showcase-data-v3-
+
+      - name: Restore R2 manifest cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .r2-manifest.json
+          key: showcase-r2-manifest-v1
+          restore-keys: showcase-r2-manifest-
+
+      - name: Sync images only (skip data)
+        run: npx tsx scripts/sync-products.ts --skip-data
+        env:
+          BACKEND_URL: https://api.databiz.app
+          AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+
+      - name: Save R2 manifest cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .r2-manifest.json
+          key: showcase-r2-manifest-v1
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: Build Next.js and deploy to Cloudflare Pages
+  # ─────────────────────────────────────────────────────────────
+  build-deploy:
+    name: Build & Deploy
+    if: |
+      always() &&
+      contains(fromJSON('["full","data","deploy"]'), github.event.client_payload.mode || github.event.inputs.mode || 'full')
+    needs: [sync-data]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download data artifact
+        id: download-artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: showcase-data
+          path: public/data/
+        continue-on-error: true
+
+      - name: Restore data cache (fallback)
+        if: steps.download-artifact.outcome != 'success'
+        uses: actions/cache/restore@v4
+        with:
+          path: public/data
+          key: showcase-data-v3-${{ github.sha }}
+          restore-keys: showcase-data-v3-
+
+      - name: Check if data exists
+        id: check-data
+        run: |
+          if [ -f "public/data/model-cards-meta.json" ]; then
+            MODEL_COUNT=$(node -e "const d=require('./public/data/model-cards-meta.json'); console.log(d.totalModels)")
+            echo "models=$MODEL_COUNT" >> $GITHUB_OUTPUT
+            echo "has_data=true" >> $GITHUB_OUTPUT
+            echo "Data available: $MODEL_COUNT models"
+          else
+            echo "has_data=false" >> $GITHUB_OUTPUT
+            echo "No data available - skipping deploy"
           fi
 
       - name: Build showcase
@@ -100,7 +226,6 @@ jobs:
             echo "::error::File count ($FILE_COUNT) approaching Cloudflare Pages 20K limit!"
             exit 1
           fi
-          echo "Images are served from R2 CDN (workwear-images.databiz.app), not from Pages"
 
       - name: Deploy to Cloudflare Pages
         if: steps.check-data.outputs.has_data == 'true'
@@ -109,23 +234,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Save data cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            public/data
-            .r2-manifest.json
-          key: showcase-data-v2-${{ github.sha }}
-
       - name: Summary
         if: always()
         run: |
           echo "### Showcase Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event.inputs.code_only || 'false' }}" = "true" ]; then
-            echo "- Mode: **Code-only** (sync skipped, cached data used)" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "- Mode: **${{ env.SYNC_MODE }}**" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.check-data.outputs.has_data }}" = "true" ]; then
             echo "- Models: **${{ steps.check-data.outputs.models }}**" >> $GITHUB_STEP_SUMMARY
             echo "- Images: **R2 CDN** (workwear-images.databiz.app)" >> $GITHUB_STEP_SUMMARY

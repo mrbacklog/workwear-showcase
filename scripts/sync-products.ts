@@ -9,7 +9,7 @@
  *   5. Optionally triggering `next build` for a full static export
  *
  * Usage:
- *   npx tsx scripts/sync-products.ts [--force] [--build] [--dry-run]
+ *   npx tsx scripts/sync-products.ts [--force] [--build] [--dry-run] [--skip-images] [--skip-data]
  *
  * Environment:
  *   BACKEND_URL   - Backend base URL (default: http://localhost:8001)
@@ -214,6 +214,8 @@ const FLAG_FORCE = args.includes('--force');
 const FLAG_BUILD = args.includes('--build');
 const FLAG_DRY_RUN = args.includes('--dry-run');
 const FLAG_DEPLOY = args.includes('--deploy');
+const FLAG_SKIP_IMAGES = args.includes('--skip-images');
+const FLAG_SKIP_DATA = args.includes('--skip-data');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -922,11 +924,63 @@ async function main(): Promise<void> {
 
   log('=== Showcase Sync ===');
   log(`Backend: ${BACKEND_URL}`);
-  log(`Flags: force=${FLAG_FORCE}, build=${FLAG_BUILD}, deploy=${FLAG_DEPLOY}, dry-run=${FLAG_DRY_RUN}`);
+  log(`Flags: force=${FLAG_FORCE}, build=${FLAG_BUILD}, deploy=${FLAG_DEPLOY}, dry-run=${FLAG_DRY_RUN}, skip-images=${FLAG_SKIP_IMAGES}, skip-data=${FLAG_SKIP_DATA}`);
 
   if (!AGENT_SECRET) {
     logError('AGENT_SECRET environment variable is required');
     process.exit(1);
+  }
+
+  // Images-only mode: skip data sync, only process images from existing data
+  if (FLAG_SKIP_DATA) {
+    log('=== Images-only mode (--skip-data) ===');
+    const metaPath = path.join(DATA_DIR, 'model-cards-meta.json');
+    const metaExists = await fs.access(metaPath).then(() => true).catch(() => false);
+    if (!metaExists) {
+      logError('No existing data found — cannot run images-only mode without prior data sync');
+      process.exit(1);
+    }
+
+    // Load existing models from cached data
+    const meta = JSON.parse(await fs.readFile(metaPath, 'utf-8'));
+    const existingModels: FrontendModel[] = [];
+    if (typeof meta.chunks === 'number') {
+      for (let i = 0; i < meta.chunks; i++) {
+        const chunk: FrontendModel[] = JSON.parse(await fs.readFile(path.join(DATA_DIR, `model-cards-${i}.json`), 'utf-8'));
+        existingModels.push(...chunk);
+      }
+    } else {
+      for (const entry of Object.values(meta.chunks as Record<string, { file: string }>)) {
+        const chunk: FrontendModel[] = JSON.parse(await fs.readFile(path.join(DATA_DIR, entry.file), 'utf-8'));
+        existingModels.push(...chunk);
+      }
+    }
+
+    log(`Loaded ${existingModels.length} models from cached data`);
+
+    // Process images only
+    const allImageTargets = collectAllImageTargets(existingModels);
+    if (allImageTargets.length > 0) {
+      log(`Downloading ${allImageTargets.length} source images...`);
+      await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
+    }
+
+    log('Generating thumbnails (300w + 600w AVIF/WebP)...');
+    const allImageKeys = allImageTargets.map(t => `${t.ean}-${t.seq}`);
+    const thumbResults = await generateThumbnails(allImageKeys, THUMBS_DIR, THUMBS_OUTPUT_DIR, log, 30);
+
+    log('Uploading thumbnails to R2 (parallel)...');
+    const manifest = loadUploadManifest();
+    const allUploadItems = thumbResults.flatMap(t => t.files.map(f => ({
+      r2Key: f.r2Key, localPath: f.localPath, contentType: f.contentType,
+    })));
+    const { uploaded, skipped } = await r2UploadBatch(allUploadItems, manifest, 50, log);
+    saveUploadManifest(manifest);
+
+    const durationMs = Date.now() - startTime;
+    log(`=== Images-only sync completed in ${(durationMs / 1000).toFixed(1)}s ===`);
+    log(`  R2: ${uploaded} uploaded, ${skipped} skipped`);
+    return;
   }
 
   // Step 1: Check for changes
@@ -1039,52 +1093,59 @@ async function main(): Promise<void> {
     allModels = exportedModels;
   }
 
-  // Step 4: Download source images (needed for thumbnail generation)
+  // Step 4: Download source images + generate thumbnails + upload to R2
+  let uploaded = 0;
+  let skipped = 0;
   const allImageTargets = collectAllImageTargets(allModels);
+  const imageFileNames = allImageTargets.map((t) => t.fileName);
 
-  if (allImageTargets.length > 0) {
-    log(`Downloading ${allImageTargets.length} source images (thumbs)...`);
-    await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
+  if (!FLAG_SKIP_IMAGES) {
+    if (allImageTargets.length > 0) {
+      log(`Downloading ${allImageTargets.length} source images (thumbs)...`);
+      await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
+    }
+
+    // Clean up stale individual source image files (keep valid ones as download cache)
+    const validImageFiles = new Set(allImageTargets.map((t) => t.fileName));
+    const staleThumbsRemoved = await cleanStaleImages(THUMBS_DIR, validImageFiles);
+    const staleFullRemoved = await cleanStaleImages(FULL_DIR, validImageFiles);
+    if (staleThumbsRemoved > 0 || staleFullRemoved > 0) {
+      log(`  Cleaned up ${staleThumbsRemoved} stale thumbs, ${staleFullRemoved} stale full images`);
+    }
+
+    // --- Generate thumbnails + upload to R2 ---
+    log('Generating thumbnails (300w + 600w AVIF/WebP)...');
+    const allImageKeys = allImageTargets.map(t => `${t.ean}-${t.seq}`);
+
+    const thumbResults = await generateThumbnails(
+      allImageKeys,
+      THUMBS_DIR,       // source directory with downloaded .webp files
+      THUMBS_OUTPUT_DIR,
+      log,
+      30,
+    );
+
+    // --- Upload to R2 (parallel batches, incremental via manifest) ---
+    log('Uploading thumbnails to R2 (parallel)...');
+    const manifest = loadUploadManifest();
+    const allUploadItems = thumbResults.flatMap(t => t.files.map(f => ({
+      r2Key: f.r2Key,
+      localPath: f.localPath,
+      contentType: f.contentType,
+    })));
+
+    ({ uploaded, skipped } = await r2UploadBatch(
+      allUploadItems,
+      manifest,
+      50,  // concurrency: 50 parallel uploads
+      log,
+    ));
+    saveUploadManifest(manifest);
+
+    log(`R2 upload complete: ${uploaded} uploaded, ${skipped} skipped (already exist)`);
+  } else {
+    log('Skipping image processing (--skip-images)');
   }
-
-  // Clean up stale individual source image files (keep valid ones as download cache)
-  const validImageFiles = new Set(allImageTargets.map((t) => t.fileName));
-  const staleThumbsRemoved = await cleanStaleImages(THUMBS_DIR, validImageFiles);
-  const staleFullRemoved = await cleanStaleImages(FULL_DIR, validImageFiles);
-  if (staleThumbsRemoved > 0 || staleFullRemoved > 0) {
-    log(`  Cleaned up ${staleThumbsRemoved} stale thumbs, ${staleFullRemoved} stale full images`);
-  }
-
-  // --- Generate thumbnails + upload to R2 ---
-  log('Generating thumbnails (300w + 600w AVIF/WebP)...');
-  const allImageKeys = allImageTargets.map(t => `${t.ean}-${t.seq}`);
-
-  const thumbResults = await generateThumbnails(
-    allImageKeys,
-    THUMBS_DIR,       // source directory with downloaded .webp files
-    THUMBS_OUTPUT_DIR,
-    log,
-    30,
-  );
-
-  // --- Upload to R2 (parallel batches, incremental via manifest) ---
-  log('Uploading thumbnails to R2 (parallel)...');
-  const manifest = loadUploadManifest();
-  const allUploadItems = thumbResults.flatMap(t => t.files.map(f => ({
-    r2Key: f.r2Key,
-    localPath: f.localPath,
-    contentType: f.contentType,
-  })));
-
-  const { uploaded, skipped } = await r2UploadBatch(
-    allUploadItems,
-    manifest,
-    50,  // concurrency: 50 parallel uploads
-    log,
-  );
-  saveUploadManifest(manifest);
-
-  log(`R2 upload complete: ${uploaded} uploaded, ${skipped} skipped (already exist)`);
 
   // Step 5: Build search index (always from full model set)
   const searchIndex = buildSearchIndex(allModels);
@@ -1093,7 +1154,6 @@ async function main(): Promise<void> {
   const totalImages = allModels.reduce((sum, m) =>
     sum + m.colorGroups.reduce((s, cg) => s + cg.images.length, 0), 0);
 
-  const imageFileNames = allImageTargets.map((t) => t.fileName);
   await writeDataFiles(
     allModels,
     frontendCategories,
