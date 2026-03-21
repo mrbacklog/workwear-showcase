@@ -21,7 +21,7 @@ import { readdirSync, existsSync } from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import MiniSearch from 'minisearch';
-import { r2Upload, loadUploadManifest, saveUploadManifest } from './r2-upload';
+import { r2UploadBatch, loadUploadManifest, saveUploadManifest } from './r2-upload';
 import { generateThumbnails } from './generate-thumbnails';
 
 // ---------------------------------------------------------------------------
@@ -1067,27 +1067,21 @@ async function main(): Promise<void> {
     30,
   );
 
-  // --- Upload to R2 (incremental, save manifest per batch) ---
-  log('Uploading thumbnails to R2...');
+  // --- Upload to R2 (parallel batches, incremental via manifest) ---
+  log('Uploading thumbnails to R2 (parallel)...');
   const manifest = loadUploadManifest();
-  let uploaded = 0;
-  let skipped = 0;
+  const allUploadItems = thumbResults.flatMap(t => t.files.map(f => ({
+    r2Key: f.r2Key,
+    localPath: f.localPath,
+    contentType: f.contentType,
+  })));
 
-  for (const thumb of thumbResults) {
-    for (const file of thumb.files) {
-      if (!manifest.uploadedKeys.has(file.r2Key)) {
-        await r2Upload(file.r2Key, file.localPath, file.contentType);
-        manifest.uploadedKeys.add(file.r2Key);
-        uploaded++;
-      } else {
-        skipped++;
-      }
-    }
-    // Save manifest periodically (crash recovery)
-    if (uploaded % 100 === 0 && uploaded > 0) {
-      saveUploadManifest(manifest);
-    }
-  }
+  const { uploaded, skipped } = await r2UploadBatch(
+    allUploadItems,
+    manifest,
+    25,  // concurrency: 25 parallel uploads
+    log,
+  );
   saveUploadManifest(manifest);
 
   log(`R2 upload complete: ${uploaded} uploaded, ${skipped} skipped (already exist)`);

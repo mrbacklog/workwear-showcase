@@ -38,6 +38,42 @@ export async function r2Upload(
   }));
 }
 
+export interface R2UploadItem {
+  r2Key: string;
+  localPath: string;
+  contentType: string;
+}
+
+/**
+ * Upload multiple files to R2 in parallel batches.
+ * Skips files already in the manifest. Saves manifest periodically.
+ */
+export async function r2UploadBatch(
+  items: R2UploadItem[],
+  manifest: UploadManifest,
+  concurrency: number = 25,
+  logFn?: (msg: string) => void,
+): Promise<{ uploaded: number; skipped: number }> {
+  const toUpload = items.filter(i => !manifest.uploadedKeys.has(i.r2Key));
+  const skipped = items.length - toUpload.length;
+  let uploaded = 0;
+
+  for (let i = 0; i < toUpload.length; i += concurrency) {
+    const batch = toUpload.slice(i, i + concurrency);
+    await Promise.all(batch.map(async (item) => {
+      await r2Upload(item.r2Key, item.localPath, item.contentType);
+      manifest.uploadedKeys.add(item.r2Key);
+    }));
+    uploaded += batch.length;
+    if (uploaded % 200 === 0 || uploaded === toUpload.length) {
+      saveUploadManifest(manifest);
+      if (logFn) logFn(`  R2 progress: ${uploaded}/${toUpload.length} uploaded`);
+    }
+  }
+
+  return { uploaded, skipped };
+}
+
 export interface UploadManifest {
   uploadedKeys: Set<string>;
 }
