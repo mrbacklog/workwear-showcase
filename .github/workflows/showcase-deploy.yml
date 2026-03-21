@@ -112,7 +112,10 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   sync-images:
     name: Sync Images
-    if: contains(fromJSON('["full","images"]'), github.event.client_payload.mode || github.event.inputs.mode || 'full')
+    if: |
+      always() &&
+      contains(fromJSON('["full","images"]'), github.event.client_payload.mode || github.event.inputs.mode || 'full')
+    needs: [sync-data]
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -128,7 +131,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Restore data cache (for image list)
+      - name: Download data artifact
+        id: download-data
+        uses: actions/download-artifact@v4
+        with:
+          name: showcase-data
+          path: public/data/
+        continue-on-error: true
+
+      - name: Restore data cache (fallback)
+        if: steps.download-data.outcome != 'success'
         uses: actions/cache/restore@v4
         with:
           path: public/data
