@@ -48,7 +48,7 @@ jobs:
         run: npm install
 
       - name: Restore data cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             public/data
@@ -108,6 +108,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Save data cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            public/data
+            .r2-manifest.json
+          key: showcase-data-v2-${{ github.sha }}
 
       - name: Summary
         if: always()

@@ -1079,7 +1079,7 @@ async function main(): Promise<void> {
   const { uploaded, skipped } = await r2UploadBatch(
     allUploadItems,
     manifest,
-    25,  // concurrency: 25 parallel uploads
+    50,  // concurrency: 50 parallel uploads
     log,
   );
   saveUploadManifest(manifest);
