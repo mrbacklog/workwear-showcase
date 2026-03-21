@@ -333,8 +333,8 @@ async function downloadImages(
     const batch = toDownload.slice(i, i + IMAGE_CONCURRENCY);
     const results = await Promise.allSettled(
       batch.map(async (t) => {
-        const sizeParam = size === 'thumb' ? '?size=thumb' : '';
-        const url = `${BACKEND_URL}${API_PREFIX}/image/${t.ean}/${t.seq}${sizeParam}`;
+        // Always download full-size images — sharp generates proper thumbnails
+        const url = `${BACKEND_URL}${API_PREFIX}/image/${t.ean}/${t.seq}`;
         const resp = await fetchWithRetry(url, {
           headers: { 'X-Agent-Secret': AGENT_SECRET },
         });

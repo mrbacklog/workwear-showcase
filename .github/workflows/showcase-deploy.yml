@@ -64,8 +64,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: public/data
-          key: showcase-data-v3-${{ github.sha }}
-          restore-keys: showcase-data-v3-
+          key: showcase-data-v4-${{ github.sha }}
+          restore-keys: showcase-data-v4-
 
       - name: Sync product data (skip images)
         run: |
@@ -97,7 +97,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: public/data
-          key: showcase-data-v3-${{ github.sha }}
+          key: showcase-data-v4-${{ github.sha }}
 
       - name: Upload data artifact
         if: steps.check-data.outputs.has_data == 'true'
@@ -132,14 +132,14 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: public/data
-          key: showcase-data-v3-${{ github.sha }}
-          restore-keys: showcase-data-v3-
+          key: showcase-data-v4-${{ github.sha }}
+          restore-keys: showcase-data-v4-
 
       - name: Restore R2 manifest cache
         uses: actions/cache/restore@v4
         with:
           path: .r2-manifest.json
-          key: showcase-r2-manifest-v1
+          key: showcase-r2-manifest-v2
           restore-keys: showcase-r2-manifest-
 
       - name: Sync images only (skip data)
@@ -158,7 +158,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .r2-manifest.json
-          key: showcase-r2-manifest-v1
+          key: showcase-r2-manifest-v2
 
   # ─────────────────────────────────────────────────────────────
   # Job 3: Build Next.js and deploy to Cloudflare Pages
@@ -197,8 +197,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: public/data
-          key: showcase-data-v3-${{ github.sha }}
-          restore-keys: showcase-data-v3-
+          key: showcase-data-v4-${{ github.sha }}
+          restore-keys: showcase-data-v4-
 
       - name: Check if data exists
         id: check-data
