@@ -151,8 +151,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .r2-manifest.json
-          key: showcase-r2-manifest-v2
-          restore-keys: showcase-r2-manifest-
+          key: showcase-r2-manifest-v3
+          restore-keys: showcase-r2-manifest-v3
 
       - name: Sync images only (skip data)
         run: npx tsx scripts/sync-products.ts --skip-data
@@ -170,7 +170,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .r2-manifest.json
-          key: showcase-r2-manifest-v2
+          key: showcase-r2-manifest-v3
 
   # ─────────────────────────────────────────────────────────────
   # Job 3: Build Next.js and deploy to Cloudflare Pages

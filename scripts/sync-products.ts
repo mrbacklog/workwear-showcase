@@ -311,11 +311,20 @@ async function downloadImages(
 ): Promise<string[]> {
   await ensureDir(destDir);
 
-  // Check which files already exist locally
+  // Check which files already exist locally and are valid (> 500 bytes)
   let existingFiles: Set<string>;
   try {
     const files = await fs.readdir(destDir);
-    existingFiles = new Set(files);
+    const validFiles = new Set<string>();
+    for (const f of files) {
+      try {
+        const stat = await fs.stat(path.join(destDir, f));
+        if (stat.size >= 500) {
+          validFiles.add(f);
+        }
+      } catch { /* skip */ }
+    }
+    existingFiles = validFiles;
   } catch {
     existingFiles = new Set();
   }
@@ -339,6 +348,10 @@ async function downloadImages(
           headers: { 'X-Agent-Secret': AGENT_SECRET },
         });
         const buffer = Buffer.from(await resp.arrayBuffer());
+        // Reject suspiciously small images (likely error responses or corrupt data)
+        if (buffer.length < 500) {
+          throw new Error(`Image too small (${buffer.length} bytes) — likely corrupt: ${t.fileName}`);
+        }
         await fs.writeFile(path.join(destDir, t.fileName), buffer);
       }),
     );
