@@ -5,95 +5,14 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { CategorySidebar } from '@/components/category/CategorySidebar';
+import { ModelCard } from '@/components/search/ModelCard';
+import { ViewSwitcher } from '@/components/search/ViewSwitcher';
+import type { ViewMode } from '@/components/search/ViewSwitcher';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { useModelCards } from '@/hooks/useModelCards';
 import { buildAggregatedCounts, getDescendantCodes } from '@/lib/category-utils';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
-import { ProductImage } from '@/components/ui/ProductImage';
-import { formatPrice } from '@/lib/format';
 import type { CategoryNode, ShowcaseModel } from '@/types/product';
-
-// ---------------------------------------------------------------------------
-// Product Card
-// ---------------------------------------------------------------------------
-
-function ProductCard({ model }: { model: ShowcaseModel }) {
-  const displayImage = useMemo(() => {
-    for (const cg of model.colorGroups) {
-      if (cg.images.length > 0) {
-        return cg.images[0];
-      }
-    }
-    return null;
-  }, [model]);
-
-  const minPrice = useMemo(() => {
-    let lowest = Infinity;
-    for (const cg of model.colorGroups) {
-      for (const v of cg.variants) {
-        if (v.priceCents > 0 && v.priceCents < lowest) {
-          lowest = v.priceCents;
-        }
-      }
-    }
-    return lowest === Infinity ? 0 : lowest;
-  }, [model]);
-
-  return (
-    <a
-      href={`/product/${model.slug}/`}
-      className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-    >
-      <div className="aspect-[3/4] w-full overflow-hidden bg-gray-50">
-        {displayImage ? (
-          <ProductImage
-            src={displayImage.thumb400Webp}
-            alt={`${model.brandName} ${model.modelName}`}
-            className="h-full w-full object-contain"
-            sizes="(max-width: 768px) 50vw, 33vw"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-gray-300">
-            Geen afbeelding
-          </div>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-          {model.brandName}
-        </p>
-        <h3 className="mt-1 text-sm font-medium text-gray-900 line-clamp-2">
-          {model.modelName || model.modelCode}
-        </h3>
-        {model.modelCode && model.modelName && (
-          <p className="mt-0.5 text-xs text-gray-400">Art. {model.modelCode}</p>
-        )}
-        {model.colorGroups.length > 1 && (
-          <div className="mt-2 flex gap-1">
-            {model.colorGroups.slice(0, 5).map((cg) => (
-              <span
-                key={cg.colorCode || cg.colorRaw}
-                className="inline-block h-4 w-4 rounded-full border border-gray-200"
-                style={{ backgroundColor: cg.hexCode || '#cccccc' }}
-                title={cg.colorName || cg.colorRaw}
-              />
-            ))}
-            {model.colorGroups.length > 5 && (
-              <span className="text-xs text-gray-400 self-center ml-1">
-                +{model.colorGroups.length - 5}
-              </span>
-            )}
-          </div>
-        )}
-        {minPrice > 0 && (
-          <p className="mt-auto pt-2 text-sm font-semibold text-gray-900">
-            vanaf {formatPrice(minPrice)}
-          </p>
-        )}
-      </div>
-    </a>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Breadcrumbs
@@ -150,6 +69,15 @@ export default function CategoryClient() {
   const { getByCategory, models, isLoading: isModelsLoading } = useModelCards();
   const { isUnlocked } = useShowcaseAuth();
   const [headerSearch, setHeaderSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'grid';
+    return (localStorage.getItem('showcase-view-mode') as ViewMode) || 'grid';
+  });
+
+  const handleViewChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('showcase-view-mode', mode);
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
     setHeaderSearch(value);
@@ -273,10 +201,13 @@ export default function CategoryClient() {
                   </div>
                 )}
 
-                <p className="mt-4 text-sm text-gray-500">
-                  {categoryModels.length}{' '}
-                  {categoryModels.length === 1 ? 'product' : 'producten'}
-                </p>
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-sm text-gray-500">
+                    {categoryModels.length}{' '}
+                    {categoryModels.length === 1 ? 'product' : 'producten'}
+                  </p>
+                  <ViewSwitcher mode={viewMode} onChange={handleViewChange} />
+                </div>
 
                 {categoryModels.length === 0 ? (
                   <div className="py-16 text-center">
@@ -285,9 +216,13 @@ export default function CategoryClient() {
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                  <div className={`mt-6 grid gap-4 ${
+                    viewMode === 'gallery'
+                      ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
+                      : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                  }`}>
                     {categoryModels.map((model) => (
-                      <ProductCard key={model.slug} model={model} />
+                      <ModelCard key={model.slug} model={model} viewMode={viewMode} />
                     ))}
                   </div>
                 )}

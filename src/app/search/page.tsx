@@ -5,12 +5,15 @@ import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { CategorySidebar } from '@/components/category/CategorySidebar';
 import { VirtualGrid } from '@/components/search/VirtualGrid';
+import { ViewSwitcher } from '@/components/search/ViewSwitcher';
+import type { ViewMode } from '@/components/search/ViewSwitcher';
 import { useSearch } from '@/hooks/useSearch';
 import { useModelCards } from '@/hooks/useModelCards';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { buildAggregatedCounts, getDescendantCodes } from '@/lib/category-utils';
 import { BrandFilter } from '@/components/search/BrandFilter';
 import { ColorFilter, COLOR_PALETTE } from '@/components/search/ColorFilter';
+import { FilterBottomSheet } from '@/components/search/FilterBottomSheet';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
 import type { BrandInfo } from '@/hooks/useModelCards';
 import type { ColorInfo } from '@/components/search/ColorFilter';
@@ -63,6 +66,16 @@ function SearchPageContent() {
   const [selectedColors, setSelectedColors] = useState<Set<string>>(
     () => new Set(colorsParam ? colorsParam.split(',').filter(Boolean) : [])
   );
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'grid';
+    return (localStorage.getItem('showcase-view-mode') as ViewMode) || 'grid';
+  });
+
+  const handleViewChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('showcase-view-mode', mode);
+  }, []);
 
   // Sync URL query to search hook on mount and when q changes
   useEffect(() => {
@@ -248,44 +261,40 @@ function SearchPageContent() {
 
   const handleBrandToggle = useCallback(
     (slug: string) => {
-      setSelectedBrands((prev) => {
-        const next = new Set(prev);
-        if (next.has(slug)) next.delete(slug);
-        else next.add(slug);
+      const next = new Set(selectedBrands);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
 
-        const params = new URLSearchParams(searchParams.toString());
-        if (next.size > 0) {
-          params.set('brands', [...next].sort().join(','));
-        } else {
-          params.delete('brands');
-        }
-        window.history.replaceState(null, '', `/search/?${params.toString()}`);
+      setSelectedBrands(next);
 
-        return next;
-      });
+      const params = new URLSearchParams(searchParams.toString());
+      if (next.size > 0) {
+        params.set('brands', [...next].sort().join(','));
+      } else {
+        params.delete('brands');
+      }
+      window.history.replaceState(null, '', `/search/?${params.toString()}`);
     },
-    [searchParams],
+    [selectedBrands, searchParams],
   );
 
   const handleColorToggle = useCallback(
     (code: string) => {
-      setSelectedColors((prev) => {
-        const next = new Set(prev);
-        if (next.has(code)) next.delete(code);
-        else next.add(code);
+      const next = new Set(selectedColors);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
 
-        const params = new URLSearchParams(searchParams.toString());
-        if (next.size > 0) {
-          params.set('colors', [...next].sort().join(','));
-        } else {
-          params.delete('colors');
-        }
-        window.history.replaceState(null, '', `/search/?${params.toString()}`);
+      setSelectedColors(next);
 
-        return next;
-      });
+      const params = new URLSearchParams(searchParams.toString());
+      if (next.size > 0) {
+        params.set('colors', [...next].sort().join(','));
+      } else {
+        params.delete('colors');
+      }
+      window.history.replaceState(null, '', `/search/?${params.toString()}`);
     },
-    [searchParams],
+    [selectedColors, searchParams],
   );
 
   // ---------------------------------------------------------------------------
@@ -294,6 +303,7 @@ function SearchPageContent() {
 
   const hasQuery = !!query.trim();
   const selectedCategoryNode = selectedCategory ? findCategory(selectedCategory) : null;
+  const activeFilterCount = (selectedCategory ? 1 : 0) + selectedColors.size;
 
   // ---------------------------------------------------------------------------
   // Render
@@ -426,20 +436,24 @@ function SearchPageContent() {
                 </div>
               ) : (
                 <>
-                  <p className="mb-6 text-sm text-gray-500">
-                    {filteredResults.length}{' '}
-                    {filteredResults.length === 1 ? 'resultaat' : 'resultaten'} voor
-                    &ldquo;{query}&rdquo;
-                    {selectedCategoryNode && (
-                      <> in {selectedCategoryNode.nameNl}</>
-                    )}
-                  </p>
+                  <div className="mb-6 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">
+                      {filteredResults.length}{' '}
+                      {filteredResults.length === 1 ? 'resultaat' : 'resultaten'} voor
+                      &ldquo;{query}&rdquo;
+                      {selectedCategoryNode && (
+                        <> in {selectedCategoryNode.nameNl}</>
+                      )}
+                    </p>
+                    <ViewSwitcher mode={viewMode} onChange={handleViewChange} />
+                  </div>
                   <VirtualGrid
                     items={filteredResults.flatMap((result) => {
                       const model = getBySlug(result.slug);
                       return model ? [model] : [];
                     })}
                     preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                    viewMode={viewMode}
                   />
                 </>
               )
@@ -457,14 +471,18 @@ function SearchPageContent() {
                 </div>
               ) : (
                 <>
-                  <p className="mb-6 text-sm text-gray-500">
-                    {browseModels.length}{' '}
-                    {browseModels.length === 1 ? 'product' : 'producten'} in{' '}
-                    {selectedCategoryNode?.nameNl}
-                  </p>
+                  <div className="mb-6 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">
+                      {browseModels.length}{' '}
+                      {browseModels.length === 1 ? 'product' : 'producten'} in{' '}
+                      {selectedCategoryNode?.nameNl}
+                    </p>
+                    <ViewSwitcher mode={viewMode} onChange={handleViewChange} />
+                  </div>
                   <VirtualGrid
                     items={browseModels}
                     preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                    viewMode={viewMode}
                   />
                 </>
               )
@@ -477,19 +495,55 @@ function SearchPageContent() {
             ) : (
               /* Default: show all products */
               <>
-                <p className="mb-6 text-sm text-gray-500">
-                  {colorFilteredModels.length}{' '}
-                  {colorFilteredModels.length === 1 ? 'product' : 'producten'}
-                </p>
+                <div className="mb-6 flex items-center justify-between">
+                  <p className="text-sm text-gray-500">
+                    {colorFilteredModels.length}{' '}
+                    {colorFilteredModels.length === 1 ? 'product' : 'producten'}
+                  </p>
+                  <ViewSwitcher mode={viewMode} onChange={handleViewChange} />
+                </div>
                 <VirtualGrid
                   items={colorFilteredModels}
                   preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                  viewMode={viewMode}
                 />
               </>
             )}
           </div>
         </div>
       </div>
+
+      {/* Mobile filter button — floating, hidden on lg+ */}
+      <button
+        type="button"
+        onClick={() => setFilterSheetOpen(true)}
+        className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105 active:scale-95 lg:hidden"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+        </svg>
+        Filters
+        {activeFilterCount > 0 && (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-bold">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
+      {/* Mobile filter bottom sheet */}
+      <FilterBottomSheet
+        isOpen={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        categoryTree={tree}
+        currentCategory={selectedCategory}
+        categoryCounts={aggregatedCounts}
+        onCategorySelect={handleCategorySelect}
+        isCategoryLoading={isCategoryLoading}
+        colors={colorsForFilter}
+        selectedColors={selectedColors}
+        onColorToggle={handleColorToggle}
+        activeFilterCount={activeFilterCount}
+      />
     </>
   );
 }
