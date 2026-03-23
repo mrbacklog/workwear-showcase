@@ -303,7 +303,7 @@ function SearchPageContent() {
 
   const hasQuery = !!query.trim();
   const selectedCategoryNode = selectedCategory ? findCategory(selectedCategory) : null;
-  const activeFilterCount = (selectedCategory ? 1 : 0) + selectedColors.size;
+  const activeFilterCount = (selectedCategory ? 1 : 0) + selectedColors.size + selectedBrands.size;
 
   // ---------------------------------------------------------------------------
   // Render
@@ -314,8 +314,8 @@ function SearchPageContent() {
       <Header searchValue={headerValue} onSearchChange={handleSearchChange} onSearchFocus={activate} />
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        {/* Horizontal brand bar — single row, no search */}
-        <div className="mb-6">
+        {/* Horizontal brand bar — hidden on mobile (in bottom sheet instead) */}
+        <div className="mb-6 hidden lg:block">
           <BrandFilter
             brands={brandsForFilter}
             selectedSlugs={selectedBrands}
@@ -539,6 +539,9 @@ function SearchPageContent() {
         categoryCounts={aggregatedCounts}
         onCategorySelect={handleCategorySelect}
         isCategoryLoading={isCategoryLoading}
+        brands={brandsForFilter}
+        selectedBrands={selectedBrands}
+        onBrandToggle={handleBrandToggle}
         colors={colorsForFilter}
         selectedColors={selectedColors}
         onColorToggle={handleColorToggle}
