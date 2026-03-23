@@ -68,7 +68,7 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
 
   const imageNode = displayImage ? (
     <ProductImage
-      src={displayImage.thumb400Webp}
+      src={displayImage.thumb400Webp || displayImage.thumbWebp}
       alt={`${model.brandName} ${model.modelName}`}
       className="h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -134,11 +134,11 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
         onMouseLeave={handleCardLeave}
       >
         {/* Image */}
-        <div className="relative aspect-square overflow-hidden bg-gray-50">
+        <div className={`relative aspect-square overflow-hidden ${displayImage ? 'bg-gray-50' : 'bg-gray-700'}`}>
           {imageNode}
 
           {/* Default gradient overlay with brand/name/price */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3 pt-12 transition-opacity duration-200 group-hover:opacity-0">
+          <div className={`absolute inset-x-0 bottom-0 p-3 pt-12 transition-opacity duration-200 group-hover:opacity-0 ${displayImage ? 'bg-gradient-to-t from-black/70 via-black/30 to-transparent' : 'bg-gradient-to-t from-black/50 to-transparent'}`}>
             <p className="text-xs uppercase tracking-wide text-white/70">{model.brandName}</p>
             <h3 className="text-sm font-medium text-white truncate">{model.modelName}</h3>
             <p className="mt-0.5 text-xs font-semibold text-white/90">{priceText}</p>
