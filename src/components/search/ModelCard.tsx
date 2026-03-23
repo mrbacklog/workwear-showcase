@@ -43,7 +43,6 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
         const firstImg = cg.images[0];
         return {
           code: cg.colorCode,
-          thumbAvif: firstImg?.thumbAvif ?? null,
           thumbWebp: firstImg?.thumbWebp ?? null,
           hexCode: cg.hexCode,
           colorRaw: cg.colorRaw,
@@ -80,8 +79,7 @@ export function ModelCard({ model, preferredColorCodes }: ModelCardProps) {
       <div className="relative aspect-square overflow-hidden bg-gray-50">
         {displayImage ? (
           <ProductImage
-            avifSrc={displayImage.thumbAvif}
-            webpSrc={displayImage.thumbWebp}
+            src={displayImage.thumb400Webp}
             alt={`${model.brandName} ${model.modelName}`}
             className="h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

@@ -40,8 +40,7 @@ export function ProductGallery({ images, selectedColor }: ProductGalleryProps) {
       <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-50">
         {mainImage && (
           <ProductImage
-            avifSrc={mainImage.thumbAvif}
-            webpSrc={mainImage.thumbWebp}
+            src={mainImage.thumb800Webp}
             alt="Product afbeelding"
             className="h-full w-full object-contain p-4"
             priority={true}
@@ -65,8 +64,7 @@ export function ProductGallery({ images, selectedColor }: ProductGalleryProps) {
               }`}
             >
               <ProductImage
-                avifSrc={image.thumbAvif}
-                webpSrc={image.thumbWebp}
+                src={image.thumbWebp}
                 alt={`Thumbnail ${index + 1}`}
                 className="h-full w-full object-contain p-1"
                 sizes="64px"

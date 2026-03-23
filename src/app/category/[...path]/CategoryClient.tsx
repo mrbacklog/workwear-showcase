@@ -47,8 +47,7 @@ function ProductCard({ model }: { model: ShowcaseModel }) {
       <div className="aspect-[3/4] w-full overflow-hidden bg-gray-50">
         {displayImage ? (
           <ProductImage
-            avifSrc={displayImage.thumbAvif}
-            webpSrc={displayImage.thumbWebp}
+            src={displayImage.thumb400Webp}
             alt={`${model.brandName} ${model.modelName}`}
             className="h-full w-full object-contain"
             sizes="(max-width: 768px) 50vw, 33vw"

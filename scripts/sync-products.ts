@@ -3,17 +3,21 @@
  *
  * Bridges the backend PIM API with the static Showcase frontend by:
  *   1. Checking for changes via the distribution API
- *   2. Exporting model data (JSON) and images (base64 WebP)
+ *   2. Exporting model data (JSON)
  *   3. Building a MiniSearch index for client-side full-text search
- *   4. Writing static JSON files to public/data/ and images to public/images/
+ *   4. Writing static JSON files to public/data/
  *   5. Optionally triggering `next build` for a full static export
  *
+ * Images are handled by the backend (R2 uploads). This script only builds
+ * R2 CDN URLs from the r2Key returned by the export API.
+ *
  * Usage:
- *   npx tsx scripts/sync-products.ts [--force] [--build] [--dry-run] [--skip-images] [--skip-data]
+ *   npx tsx scripts/sync-products.ts [--force] [--build] [--dry-run]
  *
  * Environment:
  *   BACKEND_URL   - Backend base URL (default: http://localhost:8001)
  *   AGENT_SECRET  - Required for API authentication
+ *   R2_PUBLIC_URL - Public CDN base URL for image URLs
  */
 
 import * as fs from 'fs/promises';
@@ -21,8 +25,6 @@ import { readdirSync, existsSync } from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import MiniSearch from 'minisearch';
-import { r2UploadBatch, loadUploadManifest, saveUploadManifest } from './r2-upload';
-import { generateThumbnails } from './generate-thumbnails';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -32,19 +34,11 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8001';
 const AGENT_SECRET = process.env.AGENT_SECRET ?? '';
 const API_PREFIX = '/api/v1/distribution/showcase';
 
-// Backend API URL for image fetching during sync
-// All images (full + thumbs) are downloaded to public/images/ and served from Cloudflare CDN
-const IMAGE_BASE_URL = process.env.IMAGE_BASE_URL ?? `${BACKEND_URL}${API_PREFIX}/image`;
-
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
 const DATA_DIR = path.join(PUBLIC_DIR, 'data');
-const THUMBS_DIR = path.join(PUBLIC_DIR, 'images', 'thumbs');
-const FULL_DIR = path.join(PUBLIC_DIR, 'images', 'full');
-const THUMBS_OUTPUT_DIR = path.join(process.cwd(), '.thumb-cache');
-const IMAGE_CONCURRENCY = 50;
 
 // ---------------------------------------------------------------------------
 // Types (matching backend Pydantic schemas)
@@ -65,6 +59,7 @@ interface ShowcaseImage {
   imageType: string | null;
   webpBase64: string | null;
   thumbBase64: string | null;
+  r2Key?: string;
 }
 
 interface ShowcaseVariant {
@@ -149,11 +144,9 @@ interface FrontendColorGroup {
     sequenceNumber: number;
     imageType: string;
     path: string;
-    thumbAvif: string;
-    thumbWebp: string;
-    thumb80Webp: string;
-    thumb800Avif: string;
-    thumb800Webp: string;
+    thumbWebp: string;       // 80px
+    thumb400Webp: string;    // 400px
+    thumb800Webp: string;    // 800px
   }[];
 }
 
@@ -186,7 +179,6 @@ interface SyncManifest {
   lastSyncAt: string;
   fingerprint: string;
   modelSlugs: string[];
-  imageFiles: string[];
   totalModels: number;
   totalImages: number;
 }
@@ -202,7 +194,7 @@ interface SearchDocument {
   keywords: string;
   description: string;
   categoryPath: string;
-  thumbAvif: string;
+  thumbWebp: string;
   imagePath: string;
   minPrice: number;
   publicationStatus: string;
@@ -217,8 +209,6 @@ const FLAG_FORCE = args.includes('--force');
 const FLAG_BUILD = args.includes('--build');
 const FLAG_DRY_RUN = args.includes('--dry-run');
 const FLAG_DEPLOY = args.includes('--deploy');
-const FLAG_SKIP_IMAGES = args.includes('--skip-images');
-const FLAG_SKIP_DATA = args.includes('--skip-data');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -275,124 +265,6 @@ async function fetchWithRetry(
     }
   }
   throw new Error('Unreachable');
-}
-
-// ---------------------------------------------------------------------------
-// Image download helpers
-// ---------------------------------------------------------------------------
-
-interface ImageTarget {
-  ean: string;
-  seq: number;
-  fileName: string;
-}
-
-/** Collect all unique images from all models. */
-function collectAllImageTargets(models: FrontendModel[]): ImageTarget[] {
-  const targets: ImageTarget[] = [];
-  const seen = new Set<string>();
-  for (const model of models) {
-    for (const cg of model.colorGroups) {
-      for (const img of cg.images) {
-        const key = `${img.ean}-${img.sequenceNumber}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          targets.push({ ean: img.ean, seq: img.sequenceNumber, fileName: `${key}.webp` });
-        }
-      }
-    }
-  }
-  return targets;
-}
-
-/** Download images from the backend API with concurrency control. */
-async function downloadImages(
-  targets: ImageTarget[],
-  destDir: string,
-  size: 'full' | 'thumb',
-  label: string,
-): Promise<string[]> {
-  await ensureDir(destDir);
-
-  // Check which files already exist locally and are valid (> 500 bytes)
-  let existingFiles: Set<string>;
-  try {
-    const files = await fs.readdir(destDir);
-    const validFiles = new Set<string>();
-    for (const f of files) {
-      try {
-        const stat = await fs.stat(path.join(destDir, f));
-        if (stat.size >= 500) {
-          validFiles.add(f);
-        }
-      } catch { /* skip */ }
-    }
-    existingFiles = validFiles;
-  } catch {
-    existingFiles = new Set();
-  }
-
-  const toDownload = targets.filter((t) => !existingFiles.has(t.fileName));
-  const skipped = targets.length - toDownload.length;
-  if (skipped > 0) {
-    log(`  ${label}: ${skipped} already cached, ${toDownload.length} to download`);
-  }
-
-  let downloaded = 0;
-  let failed = 0;
-
-  for (let i = 0; i < toDownload.length; i += IMAGE_CONCURRENCY) {
-    const batch = toDownload.slice(i, i + IMAGE_CONCURRENCY);
-    const results = await Promise.allSettled(
-      batch.map(async (t) => {
-        // Always download full-size images — sharp generates proper thumbnails
-        const url = `${BACKEND_URL}${API_PREFIX}/image/${t.ean}/${t.seq}`;
-        const resp = await fetchWithRetry(url, {
-          headers: { 'X-Agent-Secret': AGENT_SECRET },
-        });
-        const buffer = Buffer.from(await resp.arrayBuffer());
-        // Reject suspiciously small images (likely error responses or corrupt data)
-        if (buffer.length < 500) {
-          throw new Error(`Image too small (${buffer.length} bytes) — likely corrupt: ${t.fileName}`);
-        }
-        await fs.writeFile(path.join(destDir, t.fileName), buffer);
-      }),
-    );
-    for (const r of results) {
-      if (r.status === 'fulfilled') {
-        downloaded++;
-      } else {
-        failed++;
-      }
-    }
-    const progress = Math.min(i + IMAGE_CONCURRENCY, toDownload.length);
-    if (progress % 500 === 0 || progress === toDownload.length) {
-      log(`  ${label}: ${progress}/${toDownload.length} downloaded`);
-    }
-  }
-
-  if (failed > 0) {
-    logError(`${failed} ${label.toLowerCase()} failed to download`);
-  }
-
-  return targets.map((t) => t.fileName);
-}
-
-/** Remove image files that are no longer needed. */
-async function cleanStaleImages(destDir: string, validFiles: Set<string>): Promise<number> {
-  let removed = 0;
-  try {
-    const existing = await fs.readdir(destDir);
-    for (const file of existing) {
-      if (file.endsWith('.webp') && !validFiles.has(file)) {
-        await fs.unlink(path.join(destDir, file));
-        removed++;
-      }
-    }
-  } catch {
-    // Directory doesn't exist yet
-  }
-  return removed;
 }
 
 // ---------------------------------------------------------------------------
@@ -539,17 +411,15 @@ function transformModel(model: ShowcaseModel): FrontendModel {
       priceCents: v.priceCents ?? 0,
     })),
     images: cg.images.map((img) => {
-      const key = `${img.ean}-${img.sequenceNumber}`;
+      const r2Key = img.r2Key || `${img.ean}-${img.sequenceNumber}`;
       return {
         ean: img.ean,
         sequenceNumber: img.sequenceNumber,
         imageType: img.imageType ?? 'front',
-        path: key,
-        thumbAvif: `${R2_PUBLIC_URL}/300/${key}.avif`,
-        thumbWebp: `${R2_PUBLIC_URL}/300/${key}.webp`,
-        thumb80Webp: `${R2_PUBLIC_URL}/80/${key}.webp`,
-        thumb800Avif: `${R2_PUBLIC_URL}/800/${key}.avif`,
-        thumb800Webp: `${R2_PUBLIC_URL}/800/${key}.webp`,
+        path: r2Key,
+        thumbWebp: `${R2_PUBLIC_URL}/80/${r2Key}.webp`,
+        thumb400Webp: `${R2_PUBLIC_URL}/400/${r2Key}.webp`,
+        thumb800Webp: `${R2_PUBLIC_URL}/800/${r2Key}.webp`,
       };
     }),
   }));
@@ -607,7 +477,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
       'keywords',
       'description',
       'categoryPath',
-      'thumbAvif',
+      'thumbWebp',
       'imagePath',
       'minPrice',
       'publicationStatus',
@@ -628,20 +498,20 @@ function buildSearchIndex(models: FrontendModel[]): string {
   });
 
   const documents: SearchDocument[] = models.map((model) => {
-    // Find first thumb AVIF URL and full image path key
-    let thumbAvif = '';
+    // Find first thumb WebP URL and full image path key
+    let thumbWebp = '';
     let imagePath = '';
     for (const cg of model.colorGroups) {
       for (const img of cg.images) {
-        if (img.thumbAvif && !thumbAvif) {
-          thumbAvif = img.thumbAvif;
+        if (img.thumb400Webp && !thumbWebp) {
+          thumbWebp = img.thumb400Webp;
         }
         if (img.path && !imagePath) {
           imagePath = img.path;
         }
-        if (thumbAvif && imagePath) break;
+        if (thumbWebp && imagePath) break;
       }
-      if (thumbAvif && imagePath) break;
+      if (thumbWebp && imagePath) break;
     }
 
     // Find minimum price
@@ -674,7 +544,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
       keywords,
       description: model.shortDescriptionNl,
       categoryPath: model.categoryPath,
-      thumbAvif,
+      thumbWebp,
       imagePath,
       minPrice,
       publicationStatus: model.publicationStatus,
@@ -734,7 +604,6 @@ async function writeDataFiles(
   models: FrontendModel[],
   categoryTree: FrontendCategory[],
   searchIndex: string,
-  imageFiles: string[],
   fingerprint: string,
 ): Promise<void> {
   await ensureDir(DATA_DIR);
@@ -850,13 +719,14 @@ async function writeDataFiles(
   log(`Written ${searchIndexPath}`);
 
   // sync-manifest.json
+  const totalImages = models.reduce((sum, m) =>
+    sum + m.colorGroups.reduce((s, cg) => s + cg.images.length, 0), 0);
   const manifest: SyncManifest = {
     lastSyncAt: new Date().toISOString(),
     fingerprint,
     modelSlugs: models.map((m) => m.slug),
-    imageFiles,
     totalModels: models.length,
-    totalImages: imageFiles.length,
+    totalImages,
   };
   const manifestPath = path.join(DATA_DIR, 'sync-manifest.json');
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
@@ -943,77 +813,11 @@ async function main(): Promise<void> {
 
   log('=== Showcase Sync ===');
   log(`Backend: ${BACKEND_URL}`);
-  log(`Flags: force=${FLAG_FORCE}, build=${FLAG_BUILD}, deploy=${FLAG_DEPLOY}, dry-run=${FLAG_DRY_RUN}, skip-images=${FLAG_SKIP_IMAGES}, skip-data=${FLAG_SKIP_DATA}`);
+  log(`Flags: force=${FLAG_FORCE}, build=${FLAG_BUILD}, deploy=${FLAG_DEPLOY}, dry-run=${FLAG_DRY_RUN}`);
 
   if (!AGENT_SECRET) {
     logError('AGENT_SECRET environment variable is required');
     process.exit(1);
-  }
-
-  // Images-only mode: skip data sync, only process images from existing data
-  if (FLAG_SKIP_DATA) {
-    log('=== Images-only mode (--skip-data) ===');
-    const metaPath = path.join(DATA_DIR, 'model-cards-meta.json');
-    const metaExists = await fs.access(metaPath).then(() => true).catch(() => false);
-    if (!metaExists) {
-      logError('No existing data found — cannot run images-only mode without prior data sync');
-      process.exit(1);
-    }
-
-    // Load existing models from cached data
-    const meta = JSON.parse(await fs.readFile(metaPath, 'utf-8'));
-    const existingModels: FrontendModel[] = [];
-    if (typeof meta.chunks === 'number') {
-      for (let i = 0; i < meta.chunks; i++) {
-        const chunk: FrontendModel[] = JSON.parse(await fs.readFile(path.join(DATA_DIR, `model-cards-${i}.json`), 'utf-8'));
-        existingModels.push(...chunk);
-      }
-    } else {
-      for (const entry of Object.values(meta.chunks as Record<string, { file: string }>)) {
-        const chunk: FrontendModel[] = JSON.parse(await fs.readFile(path.join(DATA_DIR, entry.file), 'utf-8'));
-        existingModels.push(...chunk);
-      }
-    }
-
-    log(`Loaded ${existingModels.length} models from cached data`);
-
-    // Process images in batch pipeline (download → generate → upload per batch)
-    const allImageTargets = collectAllImageTargets(existingModels);
-    const manifest = loadUploadManifest();
-    const IMAGE_BATCH = 200;
-    let uploaded = 0;
-    let imgSkipped = 0;
-    log(`Processing ${allImageTargets.length} images in batches of ${IMAGE_BATCH}...`);
-
-    for (let b = 0; b < allImageTargets.length; b += IMAGE_BATCH) {
-      const batchTargets = allImageTargets.slice(b, b + IMAGE_BATCH);
-      const batchNum = Math.floor(b / IMAGE_BATCH) + 1;
-      const totalBatches = Math.ceil(allImageTargets.length / IMAGE_BATCH);
-      log(`--- Batch ${batchNum}/${totalBatches} (${batchTargets.length} images) ---`);
-
-      await downloadImages(batchTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-
-      const batchKeys = batchTargets.map(t => `${t.ean}-${t.seq}`);
-      const thumbResults = await generateThumbnails(
-        batchKeys, THUMBS_DIR, THUMBS_OUTPUT_DIR, log, 30, manifest,
-      );
-
-      if (thumbResults.length > 0) {
-        const uploadItems = thumbResults.flatMap(t => t.files.map(f => ({
-          r2Key: f.r2Key, localPath: f.localPath, contentType: f.contentType,
-        })));
-        const result = await r2UploadBatch(uploadItems, manifest, 50, log);
-        uploaded += result.uploaded;
-        imgSkipped += result.skipped;
-      }
-
-      saveUploadManifest(manifest);
-    }
-
-    const durationMs = Date.now() - startTime;
-    log(`=== Images-only sync completed in ${(durationMs / 1000).toFixed(1)}s ===`);
-    log(`  R2: ${uploaded} uploaded, ${imgSkipped} skipped`);
-    return;
   }
 
   // Step 1: Check for changes
@@ -1059,10 +863,7 @@ async function main(): Promise<void> {
   const exportData = await exportModels(modelIdsToExport);
 
   // Step 3: Transform to frontend shape
-  // Images are served by the backend API (not downloaded locally)
-  // Image URLs are absolute: ${IMAGE_BASE_URL}/{ean}/{seq}
   log('Transforming data to frontend format...');
-  log(`Image base URL: ${IMAGE_BASE_URL}`);
   const exportedModels = exportData.models.map(transformModel);
   const frontendCategories = exportData.categoryTree.map(transformCategory);
 
@@ -1126,60 +927,6 @@ async function main(): Promise<void> {
     allModels = exportedModels;
   }
 
-  // Step 4: Download source images + generate thumbnails + upload to R2 (batch pipeline)
-  let uploaded = 0;
-  let skipped = 0;
-  const allImageTargets = collectAllImageTargets(allModels);
-  const imageFileNames = allImageTargets.map((t) => t.fileName);
-
-  if (!FLAG_SKIP_IMAGES) {
-    // Clean up stale individual source image files (keep valid ones as download cache)
-    const validImageFiles = new Set(allImageTargets.map((t) => t.fileName));
-    const staleThumbsRemoved = await cleanStaleImages(THUMBS_DIR, validImageFiles);
-    const staleFullRemoved = await cleanStaleImages(FULL_DIR, validImageFiles);
-    if (staleThumbsRemoved > 0 || staleFullRemoved > 0) {
-      log(`  Cleaned up ${staleThumbsRemoved} stale thumbs, ${staleFullRemoved} stale full images`);
-    }
-
-    // Batch-pipelined: download → generate → upload per batch of 200
-    const manifest = loadUploadManifest();
-    const IMAGE_BATCH = 200;
-    log(`Processing ${allImageTargets.length} images in batches of ${IMAGE_BATCH}...`);
-
-    for (let b = 0; b < allImageTargets.length; b += IMAGE_BATCH) {
-      const batchTargets = allImageTargets.slice(b, b + IMAGE_BATCH);
-      const batchNum = Math.floor(b / IMAGE_BATCH) + 1;
-      const totalBatches = Math.ceil(allImageTargets.length / IMAGE_BATCH);
-      log(`--- Batch ${batchNum}/${totalBatches} (${batchTargets.length} images) ---`);
-
-      // 1. Download source images
-      await downloadImages(batchTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-
-      // 2. Generate thumbnails (manifest-aware skip)
-      const batchKeys = batchTargets.map(t => `${t.ean}-${t.seq}`);
-      const thumbResults = await generateThumbnails(
-        batchKeys, THUMBS_DIR, THUMBS_OUTPUT_DIR, log, 30, manifest,
-      );
-
-      // 3. Upload to R2
-      if (thumbResults.length > 0) {
-        const uploadItems = thumbResults.flatMap(t => t.files.map(f => ({
-          r2Key: f.r2Key, localPath: f.localPath, contentType: f.contentType,
-        })));
-        const result = await r2UploadBatch(uploadItems, manifest, 50, log);
-        uploaded += result.uploaded;
-        skipped += result.skipped;
-      }
-
-      // 4. Checkpoint manifest
-      saveUploadManifest(manifest);
-    }
-
-    log(`R2 upload complete: ${uploaded} uploaded, ${skipped} skipped (already exist)`);
-  } else {
-    log('Skipping image processing (--skip-images)');
-  }
-
   // Step 5: Build search index (always from full model set)
   const searchIndex = buildSearchIndex(allModels);
 
@@ -1191,7 +938,6 @@ async function main(): Promise<void> {
     allModels,
     frontendCategories,
     searchIndex,
-    imageFileNames,
     changeReport.dataFingerprint,
   );
 
@@ -1211,7 +957,7 @@ async function main(): Promise<void> {
   log(`=== Sync completed in ${(durationMs / 1000).toFixed(1)}s ===`);
   log(`  Mode:   ${isIncremental ? 'incremental' : 'full'}`);
   log(`  Models: ${allModels.length} (${exportedModels.length} exported)`);
-  log(`  Images: ${totalImages} (${imageFileNames.length} image files, R2: ${uploaded} uploaded, ${skipped} skipped)`);
+  log(`  Images: ${totalImages} (R2 CDN)`);
   log(`  Index:  ${(searchIndex.length / 1024).toFixed(0)} KB`);
 
   // Step 8 (optional): Build

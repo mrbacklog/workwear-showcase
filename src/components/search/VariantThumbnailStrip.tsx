@@ -5,7 +5,6 @@ import { ProductImage } from '@/components/ui/ProductImage';
 
 interface VariantThumb {
   code: string;
-  thumbAvif: string | null;
   thumbWebp: string | null;
   hexCode: string;
   colorRaw?: string;
@@ -163,10 +162,9 @@ export function VariantThumbnailStrip({ variants, onHover, activeIndex }: Varian
                 onMouseLeave={() => onHover?.(null)}
                 aria-label={`Kleur ${v.colorRaw || v.code}`}
               >
-                {v.thumbAvif ? (
+                {v.thumbWebp ? (
                   <ProductImage
-                    avifSrc={v.thumbAvif}
-                    webpSrc={v.thumbWebp!}
+                    src={v.thumbWebp}
                     alt={v.colorRaw || v.code}
                     className="h-full w-full object-contain rounded"
                     sizes="36px"

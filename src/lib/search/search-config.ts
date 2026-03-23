@@ -50,7 +50,6 @@ export const STORE_FIELDS: Array<keyof SearchDocument> = [
   'keywords',
   'description',
   'categoryPath',
-  'thumbAvif',
   'thumbWebp',
   'imagePath',
   'minPrice',

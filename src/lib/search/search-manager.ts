@@ -128,7 +128,6 @@ export class SearchManager {
       keywords: (hit as unknown as SearchDocument).keywords,
       description: (hit as unknown as SearchDocument).description,
       categoryPath: (hit as unknown as SearchDocument).categoryPath,
-      thumbAvif: (hit as unknown as SearchDocument).thumbAvif,
       thumbWebp: (hit as unknown as SearchDocument).thumbWebp,
       imagePath: (hit as unknown as SearchDocument).imagePath,
       minPrice: (hit as unknown as SearchDocument).minPrice,

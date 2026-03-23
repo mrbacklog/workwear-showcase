@@ -4,7 +4,7 @@
  * Data hierarchy:
  *   Brand -> ShowcaseModel -> ColorGroup -> ShowcaseVariant
  *
- * Images are WebP files stored at /images/products/{ean}-{seq}.webp
+ * Images are served from R2 CDN as WebP at multiple sizes (80/400/800px)
  * Prices are in EUR cents (8995 = 89.95 EUR)
  * Categories use a 3-level hierarchy with category_code as PK
  * Publication status controls visibility in the showcase
@@ -46,14 +46,10 @@ export interface ShowcaseImage {
   imageType: ImageType;
   /** Image key, e.g. "8712345678901-1" */
   path: string;
-  /** R2 AVIF thumbnail URL (300w), e.g. https://cdn.example.com/300/8712345678901-1.avif */
-  thumbAvif: string;
-  /** R2 WebP thumbnail URL (300w), e.g. https://cdn.example.com/300/8712345678901-1.webp */
+  /** R2 WebP thumbnail (80w) for swatches and thumbnail strips */
   thumbWebp: string;
-  /** R2 WebP tiny thumbnail (80w) for swatches and thumbnail strips */
-  thumb80Webp: string;
-  /** R2 AVIF large thumbnail (800w) for product detail */
-  thumb800Avif: string;
+  /** R2 WebP medium thumbnail (400w) for grid cards */
+  thumb400Webp: string;
   /** R2 WebP large thumbnail (800w) for product detail */
   thumb800Webp: string;
 }
@@ -167,8 +163,6 @@ export interface SyncManifest {
   fingerprint: string;
   /** List of all available model slugs */
   modelSlugs: string[];
-  /** List of all image file paths */
-  imageFiles: string[];
   /** Total number of models in the showcase */
   totalModels: number;
   /** Total number of images in the showcase */

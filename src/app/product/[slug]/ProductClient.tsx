@@ -57,8 +57,7 @@ function ProductGallery({
       {/* Main image: full-size from API with thumb placeholder */}
       <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-50">
         <ProductImage
-          avifSrc={mainImage.thumbAvif}
-          webpSrc={mainImage.thumbWebp}
+          src={mainImage.thumb800Webp}
           alt={modelName}
           className={`h-full w-full object-contain transition-opacity duration-200 ${fullLoaded ? 'opacity-0' : 'opacity-100'}`}
           priority={true}
@@ -101,8 +100,7 @@ function ProductGallery({
               }`}
             >
               <ProductImage
-                avifSrc={img.thumbAvif}
-                webpSrc={img.thumbWebp}
+                src={img.thumbWebp}
                 alt={`${modelName} afbeelding ${idx + 1}`}
                 className="h-full w-full object-contain"
                 sizes="64px"

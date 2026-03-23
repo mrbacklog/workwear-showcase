@@ -105,8 +105,9 @@ interface FrontendColorGroup {
     sequenceNumber: number;
     imageType: string;
     path: string;
-    thumbAvif: string;
     thumbWebp: string;
+    thumb400Webp: string;
+    thumb800Webp: string;
   }[];
 }
 
@@ -186,14 +187,18 @@ function transformModel(model: ShowcaseModel): FrontendModel {
         sizeDisplay: v.sizeDisplay ?? v.sizeRaw,
         priceCents: v.priceCents ?? 0,
       })),
-      images: cg.images.map((img) => ({
-        ean: img.ean,
-        sequenceNumber: img.sequenceNumber,
-        imageType: img.imageType ?? 'front',
-        path: `${img.ean}-${img.sequenceNumber}`,
-        thumbAvif: `https://workwear-images.databiz.app/300/${img.ean}-${img.sequenceNumber}.avif`,
-        thumbWebp: `https://workwear-images.databiz.app/300/${img.ean}-${img.sequenceNumber}.webp`,
-      })),
+      images: cg.images.map((img) => {
+        const r2Key = `${img.ean}-${img.sequenceNumber}`;
+        return {
+          ean: img.ean,
+          sequenceNumber: img.sequenceNumber,
+          imageType: img.imageType ?? 'front',
+          path: r2Key,
+          thumbWebp: `https://workwear-images.databiz.app/80/${r2Key}.webp`,
+          thumb400Webp: `https://workwear-images.databiz.app/400/${r2Key}.webp`,
+          thumb800Webp: `https://workwear-images.databiz.app/800/${r2Key}.webp`,
+        };
+      }),
     })),
   };
 }
@@ -372,7 +377,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
     fields: ['name', 'brand', 'keywords', 'articleNumber', 'description', 'categoryPath'],
     storeFields: [
       'id', 'slug', 'name', 'brand', 'brandSlug', 'articleNumber',
-      'keywords', 'description', 'categoryPath', 'thumbAvif', 'thumbWebp', 'imagePath',
+      'keywords', 'description', 'categoryPath', 'thumbWebp', 'imagePath',
       'minPrice', 'publicationStatus',
     ],
     searchOptions: {
@@ -384,17 +389,15 @@ function buildSearchIndex(models: FrontendModel[]): string {
   });
 
   const documents = models.map((model) => {
-    let thumbAvif = '';
     let thumbWebp = '';
     let imagePath = '';
     for (const cg of model.colorGroups) {
       for (const img of cg.images) {
-        if (img.thumbAvif && !thumbAvif) thumbAvif = img.thumbAvif;
-        if (img.thumbWebp && !thumbWebp) thumbWebp = img.thumbWebp;
+        if (img.thumb400Webp && !thumbWebp) thumbWebp = img.thumb400Webp;
         if (img.path && !imagePath) imagePath = img.path;
-        if (thumbAvif && imagePath) break;
+        if (thumbWebp && imagePath) break;
       }
-      if (thumbAvif && imagePath) break;
+      if (thumbWebp && imagePath) break;
     }
 
     let minPrice = Infinity;
@@ -418,7 +421,6 @@ function buildSearchIndex(models: FrontendModel[]): string {
       keywords,
       description: model.shortDescriptionNl || model.descriptionNl,
       categoryPath: model.categoryPath,
-      thumbAvif,
       thumbWebp,
       imagePath,
       minPrice,
@@ -481,7 +483,6 @@ async function main() {
     lastSyncAt: new Date().toISOString(),
     fingerprint: 'sample-dataset-fixture',
     modelSlugs: frontendModels.map(m => m.slug),
-    imageFiles: [],
     totalModels: frontendModels.length,
     totalImages: 0,
   };

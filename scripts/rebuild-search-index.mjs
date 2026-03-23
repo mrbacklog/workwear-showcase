@@ -16,7 +16,7 @@ const models = JSON.parse(readFileSync(modelsPath, 'utf8'));
 console.log(`Loaded ${models.length} models from model-cards.json`);
 
 const SEARCH_FIELDS = ['name', 'brand', 'keywords', 'articleNumber', 'description', 'categoryPath'];
-const STORE_FIELDS = ['id', 'slug', 'name', 'brand', 'brandSlug', 'articleNumber', 'keywords', 'description', 'categoryPath', 'thumbAvif', 'thumbWebp', 'imagePath', 'minPrice', 'publicationStatus'];
+const STORE_FIELDS = ['id', 'slug', 'name', 'brand', 'brandSlug', 'articleNumber', 'keywords', 'description', 'categoryPath', 'thumbWebp', 'imagePath', 'minPrice', 'publicationStatus'];
 
 const miniSearch = new MiniSearch({
   fields: SEARCH_FIELDS,
@@ -30,20 +30,18 @@ const miniSearch = new MiniSearch({
 });
 
 const documents = models.map((model) => {
-  let thumbAvif = '';
   let thumbWebp = '';
   let imagePath = '';
   if (Array.isArray(model.colorGroups)) {
     for (const cg of model.colorGroups) {
       if (Array.isArray(cg.images)) {
         for (const img of cg.images) {
-          if (img.thumbAvif && !thumbAvif) thumbAvif = img.thumbAvif;
-          if (img.thumbWebp && !thumbWebp) thumbWebp = img.thumbWebp;
+          if (img.thumb400Webp && !thumbWebp) thumbWebp = img.thumb400Webp;
           if (img.path && !imagePath) imagePath = img.path;
-          if (thumbAvif && imagePath) break;
+          if (thumbWebp && imagePath) break;
         }
       }
-      if (thumbAvif && imagePath) break;
+      if (thumbWebp && imagePath) break;
     }
   }
 
@@ -76,7 +74,6 @@ const documents = models.map((model) => {
     keywords,
     description: model.shortDescriptionNl || model.descriptionNl || '',
     categoryPath: model.categoryPath || '',
-    thumbAvif,
     thumbWebp,
     imagePath,
     minPrice,
