@@ -314,15 +314,6 @@ function SearchPageContent() {
       <Header searchValue={headerValue} onSearchChange={handleSearchChange} onSearchFocus={activate} />
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        {/* Horizontal brand bar — hidden on mobile (in bottom sheet instead) */}
-        <div className="mb-6 hidden lg:block">
-          <BrandFilter
-            brands={brandsForFilter}
-            selectedSlugs={selectedBrands}
-            onToggle={handleBrandToggle}
-          />
-        </div>
-
         <div className="flex gap-8">
           {/* Sidebar — categories + colors, hidden on mobile */}
           <aside className="hidden w-64 shrink-0 lg:block sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
@@ -347,6 +338,14 @@ function SearchPageContent() {
               colors={colorsForFilter}
               selectedCodes={selectedColors}
               onToggle={handleColorToggle}
+            />
+
+            <hr className="my-4 border-gray-200" />
+
+            <BrandFilter
+              brands={brandsForFilter}
+              selectedSlugs={selectedBrands}
+              onToggle={handleBrandToggle}
             />
           </aside>
 

@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { CategorySidebar } from '@/components/category/CategorySidebar';
 import { ColorFilter } from '@/components/search/ColorFilter';
+import { BrandFilter } from '@/components/search/BrandFilter';
 import type { CategoryNode } from '@/types/product';
 import type { ColorInfo } from '@/components/search/ColorFilter';
 import type { BrandInfo } from '@/hooks/useModelCards';
@@ -138,35 +139,20 @@ export function FilterBottomSheet({
 
           <hr className="border-gray-200" />
 
-          {/* Brands */}
-          <div>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Merken</h2>
-            <div className="flex flex-wrap gap-2">
-              {brands.map((brand) => (
-                <button
-                  key={brand.slug}
-                  type="button"
-                  onClick={() => onBrandToggle(brand.slug)}
-                  className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
-                    selectedBrands.has(brand.slug)
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {brand.name}
-                  <span className="ml-1 text-xs opacity-60">{brand.modelCount}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <hr className="border-gray-200" />
-
           {/* Colors */}
           <ColorFilter
             colors={colors}
             selectedCodes={selectedColors}
             onToggle={onColorToggle}
+          />
+
+          <hr className="border-gray-200" />
+
+          {/* Brands */}
+          <BrandFilter
+            brands={brands}
+            selectedSlugs={selectedBrands}
+            onToggle={onBrandToggle}
           />
         </div>
 

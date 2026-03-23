@@ -80,8 +80,8 @@ export function ColorFilter({ colors, selectedCodes, onToggle }: ColorFilterProp
               onClick={() => onToggle(color.code)}
               title={title}
               aria-label={title}
-              className={`relative flex h-7 w-7 items-center justify-center rounded-full cursor-pointer transition-transform hover:scale-110 ${
-                isSelected ? 'ring-2 ring-offset-2 ring-gray-700' : ''
+              className={`relative flex h-7 w-7 items-center justify-center rounded-full cursor-pointer ring-2 ring-offset-2 transition-all hover:scale-110 ${
+                isSelected ? 'ring-gray-700' : 'ring-transparent ring-offset-transparent'
               } ${light ? 'border border-gray-300' : ''} ${
                 color.modelCount === 0 ? 'opacity-30' : ''
               }`}

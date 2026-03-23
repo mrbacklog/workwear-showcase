@@ -21,35 +21,37 @@ export function BrandFilter({ brands, selectedSlugs, onToggle }: BrandFilterProp
   }, [brands, selectedSlugs]);
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-      <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-500">
+    <div>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
         Merken
-      </span>
-      {sortedBrands.map((brand) => {
-        const isSelected = selectedSlugs.has(brand.slug);
-        const isDisabled = brand.modelCount === 0 && !isSelected;
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        {sortedBrands.map((brand) => {
+          const isSelected = selectedSlugs.has(brand.slug);
+          const isDisabled = brand.modelCount === 0 && !isSelected;
 
-        return (
-          <button
-            key={brand.slug}
-            type="button"
-            onClick={() => onToggle(brand.slug)}
-            disabled={isDisabled}
-            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs whitespace-nowrap transition-colors ${
-              isSelected
-                ? 'bg-gray-800 text-white'
-                : isDisabled
-                  ? 'bg-gray-50 text-gray-300'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {brand.name}
-            <span className={`ml-1 ${isSelected ? 'text-gray-300' : 'text-gray-400'}`}>
-              {brand.modelCount}
-            </span>
-          </button>
-        );
-      })}
+          return (
+            <button
+              key={brand.slug}
+              type="button"
+              onClick={() => onToggle(brand.slug)}
+              disabled={isDisabled}
+              className={`rounded-full px-2.5 py-1 text-xs whitespace-nowrap transition-colors ${
+                isSelected
+                  ? 'bg-gray-800 text-white'
+                  : isDisabled
+                    ? 'bg-gray-50 text-gray-300'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {brand.name}
+              <span className={`ml-1 ${isSelected ? 'text-gray-300' : 'text-gray-400'}`}>
+                {brand.modelCount}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
