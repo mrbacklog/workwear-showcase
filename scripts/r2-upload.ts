@@ -34,7 +34,7 @@ export async function r2Upload(
     Key: key,
     Body: body,
     ContentType: contentType,
-    CacheControl: 'public, max-age=31536000, immutable',
+    CacheControl: 'public, max-age=86400, s-maxage=3600',
   }));
 }
 

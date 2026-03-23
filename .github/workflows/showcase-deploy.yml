@@ -165,6 +165,25 @@ jobs:
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
 
+      - name: Purge Cloudflare CDN cache for R2 images
+        if: success()
+        run: |
+          # Get zone ID for databiz.app
+          ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=databiz.app" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');console.log(JSON.parse(d).result[0]?.id || '')")
+          if [ -n "$ZONE_ID" ]; then
+            echo "Purging CDN cache for zone $ZONE_ID (workwear-images.databiz.app)..."
+            curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{"hosts":["workwear-images.databiz.app"]}' | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');const r=JSON.parse(d);console.log(r.success ? 'Cache purged successfully' : 'Purge failed: '+JSON.stringify(r.errors))"
+          else
+            echo "Warning: Could not find zone ID for databiz.app"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: Save R2 manifest cache
         if: always()
         uses: actions/cache/save@v4
