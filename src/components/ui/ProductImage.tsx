@@ -10,14 +10,19 @@ interface ProductImageProps {
 }
 
 /**
- * Build srcSet with 300w and 600w variants.
- * Input: "https://cdn/300/ean-1.avif" → "https://cdn/300/ean-1.avif 300w, https://cdn/600/ean-1.avif 600w"
+ * Build srcSet with all available size tiers.
+ * AVIF: 300w, 600w, 800w
+ * WebP: 80w, 300w, 600w, 800w (80px only available as WebP)
  */
 function buildSrcSet(src: string): string {
-  // src is like https://workwear-images.databiz.app/300/ean-seq.ext
-  const src600 = src.replace('/300/', '/600/');
-  if (src600 === src) return src; // fallback if no /300/ in path
-  return `${src} 300w, ${src600} 600w`;
+  const match = src.match(/\/(\d+)\//);
+  if (!match) return src;
+  const baseSize = match[1];
+  const isAvif = src.endsWith('.avif');
+  const sizes = isAvif ? [300, 600, 800] : [80, 300, 600, 800];
+  return sizes
+    .map((size) => `${src.replace(`/${baseSize}/`, `/${size}/`)} ${size}w`)
+    .join(', ');
 }
 
 export function ProductImage({

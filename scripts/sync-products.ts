@@ -151,6 +151,9 @@ interface FrontendColorGroup {
     path: string;
     thumbAvif: string;
     thumbWebp: string;
+    thumb80Webp: string;
+    thumb800Avif: string;
+    thumb800Webp: string;
   }[];
 }
 
@@ -544,6 +547,9 @@ function transformModel(model: ShowcaseModel): FrontendModel {
         path: key,
         thumbAvif: `${R2_PUBLIC_URL}/300/${key}.avif`,
         thumbWebp: `${R2_PUBLIC_URL}/300/${key}.webp`,
+        thumb80Webp: `${R2_PUBLIC_URL}/80/${key}.webp`,
+        thumb800Avif: `${R2_PUBLIC_URL}/800/${key}.avif`,
+        thumb800Webp: `${R2_PUBLIC_URL}/800/${key}.webp`,
       };
     }),
   }));
@@ -971,28 +977,42 @@ async function main(): Promise<void> {
 
     log(`Loaded ${existingModels.length} models from cached data`);
 
-    // Process images only
+    // Process images in batch pipeline (download → generate → upload per batch)
     const allImageTargets = collectAllImageTargets(existingModels);
-    if (allImageTargets.length > 0) {
-      log(`Downloading ${allImageTargets.length} source images...`);
-      await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-    }
-
-    log('Generating thumbnails (300w + 600w AVIF/WebP)...');
-    const allImageKeys = allImageTargets.map(t => `${t.ean}-${t.seq}`);
-    const thumbResults = await generateThumbnails(allImageKeys, THUMBS_DIR, THUMBS_OUTPUT_DIR, log, 30);
-
-    log('Uploading thumbnails to R2 (parallel)...');
     const manifest = loadUploadManifest();
-    const allUploadItems = thumbResults.flatMap(t => t.files.map(f => ({
-      r2Key: f.r2Key, localPath: f.localPath, contentType: f.contentType,
-    })));
-    const { uploaded, skipped } = await r2UploadBatch(allUploadItems, manifest, 50, log);
-    saveUploadManifest(manifest);
+    const IMAGE_BATCH = 200;
+    let uploaded = 0;
+    let imgSkipped = 0;
+    log(`Processing ${allImageTargets.length} images in batches of ${IMAGE_BATCH}...`);
+
+    for (let b = 0; b < allImageTargets.length; b += IMAGE_BATCH) {
+      const batchTargets = allImageTargets.slice(b, b + IMAGE_BATCH);
+      const batchNum = Math.floor(b / IMAGE_BATCH) + 1;
+      const totalBatches = Math.ceil(allImageTargets.length / IMAGE_BATCH);
+      log(`--- Batch ${batchNum}/${totalBatches} (${batchTargets.length} images) ---`);
+
+      await downloadImages(batchTargets, THUMBS_DIR, 'thumb', 'Thumbs');
+
+      const batchKeys = batchTargets.map(t => `${t.ean}-${t.seq}`);
+      const thumbResults = await generateThumbnails(
+        batchKeys, THUMBS_DIR, THUMBS_OUTPUT_DIR, log, 30, manifest,
+      );
+
+      if (thumbResults.length > 0) {
+        const uploadItems = thumbResults.flatMap(t => t.files.map(f => ({
+          r2Key: f.r2Key, localPath: f.localPath, contentType: f.contentType,
+        })));
+        const result = await r2UploadBatch(uploadItems, manifest, 50, log);
+        uploaded += result.uploaded;
+        imgSkipped += result.skipped;
+      }
+
+      saveUploadManifest(manifest);
+    }
 
     const durationMs = Date.now() - startTime;
     log(`=== Images-only sync completed in ${(durationMs / 1000).toFixed(1)}s ===`);
-    log(`  R2: ${uploaded} uploaded, ${skipped} skipped`);
+    log(`  R2: ${uploaded} uploaded, ${imgSkipped} skipped`);
     return;
   }
 
@@ -1106,18 +1126,13 @@ async function main(): Promise<void> {
     allModels = exportedModels;
   }
 
-  // Step 4: Download source images + generate thumbnails + upload to R2
+  // Step 4: Download source images + generate thumbnails + upload to R2 (batch pipeline)
   let uploaded = 0;
   let skipped = 0;
   const allImageTargets = collectAllImageTargets(allModels);
   const imageFileNames = allImageTargets.map((t) => t.fileName);
 
   if (!FLAG_SKIP_IMAGES) {
-    if (allImageTargets.length > 0) {
-      log(`Downloading ${allImageTargets.length} source images (thumbs)...`);
-      await downloadImages(allImageTargets, THUMBS_DIR, 'thumb', 'Thumbs');
-    }
-
     // Clean up stale individual source image files (keep valid ones as download cache)
     const validImageFiles = new Set(allImageTargets.map((t) => t.fileName));
     const staleThumbsRemoved = await cleanStaleImages(THUMBS_DIR, validImageFiles);
@@ -1126,34 +1141,39 @@ async function main(): Promise<void> {
       log(`  Cleaned up ${staleThumbsRemoved} stale thumbs, ${staleFullRemoved} stale full images`);
     }
 
-    // --- Generate thumbnails + upload to R2 ---
-    log('Generating thumbnails (300w + 600w AVIF/WebP)...');
-    const allImageKeys = allImageTargets.map(t => `${t.ean}-${t.seq}`);
-
-    const thumbResults = await generateThumbnails(
-      allImageKeys,
-      THUMBS_DIR,       // source directory with downloaded .webp files
-      THUMBS_OUTPUT_DIR,
-      log,
-      30,
-    );
-
-    // --- Upload to R2 (parallel batches, incremental via manifest) ---
-    log('Uploading thumbnails to R2 (parallel)...');
+    // Batch-pipelined: download → generate → upload per batch of 200
     const manifest = loadUploadManifest();
-    const allUploadItems = thumbResults.flatMap(t => t.files.map(f => ({
-      r2Key: f.r2Key,
-      localPath: f.localPath,
-      contentType: f.contentType,
-    })));
+    const IMAGE_BATCH = 200;
+    log(`Processing ${allImageTargets.length} images in batches of ${IMAGE_BATCH}...`);
 
-    ({ uploaded, skipped } = await r2UploadBatch(
-      allUploadItems,
-      manifest,
-      50,  // concurrency: 50 parallel uploads
-      log,
-    ));
-    saveUploadManifest(manifest);
+    for (let b = 0; b < allImageTargets.length; b += IMAGE_BATCH) {
+      const batchTargets = allImageTargets.slice(b, b + IMAGE_BATCH);
+      const batchNum = Math.floor(b / IMAGE_BATCH) + 1;
+      const totalBatches = Math.ceil(allImageTargets.length / IMAGE_BATCH);
+      log(`--- Batch ${batchNum}/${totalBatches} (${batchTargets.length} images) ---`);
+
+      // 1. Download source images
+      await downloadImages(batchTargets, THUMBS_DIR, 'thumb', 'Thumbs');
+
+      // 2. Generate thumbnails (manifest-aware skip)
+      const batchKeys = batchTargets.map(t => `${t.ean}-${t.seq}`);
+      const thumbResults = await generateThumbnails(
+        batchKeys, THUMBS_DIR, THUMBS_OUTPUT_DIR, log, 30, manifest,
+      );
+
+      // 3. Upload to R2
+      if (thumbResults.length > 0) {
+        const uploadItems = thumbResults.flatMap(t => t.files.map(f => ({
+          r2Key: f.r2Key, localPath: f.localPath, contentType: f.contentType,
+        })));
+        const result = await r2UploadBatch(uploadItems, manifest, 50, log);
+        uploaded += result.uploaded;
+        skipped += result.skipped;
+      }
+
+      // 4. Checkpoint manifest
+      saveUploadManifest(manifest);
+    }
 
     log(`R2 upload complete: ${uploaded} uploaded, ${skipped} skipped (already exist)`);
   } else {

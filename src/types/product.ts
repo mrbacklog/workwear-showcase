@@ -50,6 +50,12 @@ export interface ShowcaseImage {
   thumbAvif: string;
   /** R2 WebP thumbnail URL (300w), e.g. https://cdn.example.com/300/8712345678901-1.webp */
   thumbWebp: string;
+  /** R2 WebP tiny thumbnail (80w) for swatches and thumbnail strips */
+  thumb80Webp: string;
+  /** R2 AVIF large thumbnail (800w) for product detail */
+  thumb800Avif: string;
+  /** R2 WebP large thumbnail (800w) for product detail */
+  thumb800Webp: string;
 }
 
 // ---------------------------------------------------------------------------

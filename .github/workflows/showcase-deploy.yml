@@ -117,7 +117,7 @@ jobs:
       contains(fromJSON('["full","images"]'), github.event.client_payload.mode || github.event.inputs.mode || 'full')
     needs: [sync-data]
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - name: Checkout code
@@ -151,8 +151,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .r2-manifest.json
-          key: showcase-r2-manifest-v3
-          restore-keys: showcase-r2-manifest-v3
+          key: showcase-r2-manifest-v4
+          restore-keys: showcase-r2-manifest-v4
 
       - name: Sync images only (skip data)
         run: npx tsx scripts/sync-products.ts --skip-data
@@ -170,7 +170,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .r2-manifest.json
-          key: showcase-r2-manifest-v3
+          key: showcase-r2-manifest-v4
 
   # ─────────────────────────────────────────────────────────────
   # Job 3: Build Next.js and deploy to Cloudflare Pages

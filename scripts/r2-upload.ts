@@ -51,7 +51,7 @@ export interface R2UploadItem {
 export async function r2UploadBatch(
   items: R2UploadItem[],
   manifest: UploadManifest,
-  concurrency: number = 25,
+  concurrency: number = 50,
   logFn?: (msg: string) => void,
 ): Promise<{ uploaded: number; skipped: number }> {
   const toUpload = items.filter(i => !manifest.uploadedKeys.has(i.r2Key));
