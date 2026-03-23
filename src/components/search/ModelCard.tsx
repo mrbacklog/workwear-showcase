@@ -71,7 +71,7 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
       src={displayImage.thumb400Webp || displayImage.thumbWebp}
       alt={`${model.brandName} ${model.modelName}`}
       className="h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
-      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
     />
   ) : (
     <div className="flex h-full w-full items-center justify-center text-sm text-gray-300">

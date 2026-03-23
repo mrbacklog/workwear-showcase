@@ -108,8 +108,8 @@ export function VariantThumbnailStrip({
             key={`${v.code}-${i}`}
             type="button"
             className={[
-              'scroll-snap-start shrink-0 overflow-hidden rounded-lg bg-gray-50',
-              isActive ? 'ring-2 ring-gray-400 ring-offset-1' : '',
+              'scroll-snap-start shrink-0 overflow-hidden rounded-lg bg-gray-50 border-2 transition-colors',
+              isActive ? 'border-gray-500' : 'border-transparent',
             ]
               .filter(Boolean)
               .join(' ')}

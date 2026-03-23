@@ -45,8 +45,8 @@ export function ColorSwatchStrip({ colors, onHover, activeColor }: ColorSwatchSt
         <button
           key={color.code}
           type="button"
-          className={`h-5 w-5 shrink-0 rounded-full transition-transform ${
-            activeColor === color.code ? 'scale-125 ring-2 ring-gray-400 ring-offset-1' : ''
+          className={`h-5 w-5 shrink-0 rounded-full transition-all ${
+            activeColor === color.code ? 'scale-110 ring-1 ring-gray-500 ring-offset-1' : ''
           } ${needsBorder(color.hexCode) ? 'border border-gray-300' : ''}`}
           style={{ backgroundColor: color.hexCode }}
           onMouseEnter={() => onHover?.(color.code)}

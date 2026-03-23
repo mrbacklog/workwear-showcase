@@ -22,7 +22,13 @@ function getColumnCount(width: number, viewMode: ViewMode): number {
     if (width >= 1024) return 2;
     return 1;
   }
-  // grid + hover
+  if (viewMode === 'hover') {
+    if (width >= 1440) return 4;
+    if (width >= 1024) return 3;
+    if (width >= 640) return 3;
+    return 2;
+  }
+  // grid
   if (width >= 1440) return 5;
   if (width >= 1024) return 4;
   if (width >= 640) return 3;
@@ -32,7 +38,7 @@ function getColumnCount(width: number, viewMode: ViewMode): number {
 function getEstimatedRowHeight(viewMode: ViewMode): number {
   if (viewMode === 'gallery') return 380;
   if (viewMode === 'grid') return 420;
-  return 350; // hover
+  return 300; // hover — smaller tiles, 3-4 per row
 }
 
 interface VirtualGridProps {
