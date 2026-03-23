@@ -8,7 +8,8 @@ interface ProductImageProps {
   onLoad?: () => void;
 }
 
-function buildSrcSet(src: string): string {
+function buildSrcSet(src: string | undefined): string {
+  if (!src) return '';
   const match = src.match(/\/(\d+)\//);
   if (!match) return src;
   const baseSize = match[1];
@@ -26,6 +27,7 @@ export function ProductImage({
   priority = false,
   onLoad,
 }: ProductImageProps) {
+  if (!src) return null;
   return (
     <img
       src={src}
