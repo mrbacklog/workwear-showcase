@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
-import { CategorySidebar } from '@/components/category/CategorySidebar';
 import { ModelCard } from '@/components/search/ModelCard';
 import { ViewSwitcher } from '@/components/search/ViewSwitcher';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
@@ -136,22 +135,15 @@ export default function CategoryClient() {
 
   return (
     <>
-      <Header searchValue={headerSearch} onSearchChange={handleSearchChange} />
+      <Header
+        searchValue={headerSearch}
+        onSearchChange={handleSearchChange}
+        categoryTree={tree}
+        categoryCounts={aggregatedCounts}
+        activeCategory={categoryCode}
+      />
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex gap-8">
-          {/* Sidebar */}
-          <aside className="hidden w-64 shrink-0 lg:block sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
-            {!isCategoryLoading && (
-              <CategorySidebar
-                tree={tree}
-                currentCode={categoryCode}
-                counts={aggregatedCounts}
-              />
-            )}
-          </aside>
-
-          {/* Main content */}
           <div className="flex-1">
             {isLoading ? (
               <div className="animate-pulse">
@@ -229,7 +221,6 @@ export default function CategoryClient() {
               </>
             )}
           </div>
-        </div>
       </div>
     </>
   );

@@ -1,22 +1,14 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
-import { CategorySidebar } from '@/components/category/CategorySidebar';
+import { useEffect } from 'react';
 import { ColorFilter } from '@/components/search/ColorFilter';
 import { BrandFilter } from '@/components/search/BrandFilter';
-import type { CategoryNode } from '@/types/product';
 import type { ColorInfo } from '@/components/search/ColorFilter';
 import type { BrandInfo } from '@/hooks/useModelCards';
 
 interface FilterBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  // Category
-  categoryTree: CategoryNode[];
-  currentCategory: string | null;
-  categoryCounts: Record<string, number>;
-  onCategorySelect: (code: string) => void;
-  isCategoryLoading: boolean;
   // Brands
   brands: BrandInfo[];
   selectedBrands: Set<string>;
@@ -32,11 +24,6 @@ interface FilterBottomSheetProps {
 export function FilterBottomSheet({
   isOpen,
   onClose,
-  categoryTree,
-  currentCategory,
-  categoryCounts,
-  onCategorySelect,
-  isCategoryLoading,
   brands,
   selectedBrands,
   onBrandToggle,
@@ -64,13 +51,6 @@ export function FilterBottomSheet({
     }
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
-
-  const handleCategorySelect = useCallback(
-    (code: string) => {
-      onCategorySelect(code);
-    },
-    [onCategorySelect],
-  );
 
   return (
     <>
@@ -121,24 +101,6 @@ export function FilterBottomSheet({
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
-          {/* Categories */}
-          {isCategoryLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-6 w-3/4 animate-pulse rounded bg-gray-100" />
-              ))}
-            </div>
-          ) : (
-            <CategorySidebar
-              tree={categoryTree}
-              currentCode={currentCategory ?? undefined}
-              counts={categoryCounts}
-              onSelect={handleCategorySelect}
-            />
-          )}
-
-          <hr className="border-gray-200" />
-
           {/* Colors */}
           <ColorFilter
             colors={colors}

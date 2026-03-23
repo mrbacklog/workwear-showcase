@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useMemo, useState, useCallback, memo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
-import { CategorySidebar } from '@/components/category/CategorySidebar';
 import { VirtualGrid } from '@/components/search/VirtualGrid';
 import { ViewSwitcher } from '@/components/search/ViewSwitcher';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
@@ -311,29 +310,20 @@ function SearchPageContent() {
 
   return (
     <>
-      <Header searchValue={headerValue} onSearchChange={handleSearchChange} onSearchFocus={activate} />
+      <Header
+        searchValue={headerValue}
+        onSearchChange={handleSearchChange}
+        onSearchFocus={activate}
+        categoryTree={tree}
+        categoryCounts={aggregatedCounts}
+        activeCategory={selectedCategory}
+        onCategorySelect={handleCategorySelect}
+      />
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex gap-8">
-          {/* Sidebar — categories + colors, hidden on mobile */}
-          <aside className="hidden w-64 shrink-0 lg:block sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
-            {isCategoryLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="h-6 w-3/4 animate-pulse rounded bg-gray-100" />
-                ))}
-              </div>
-            ) : (
-              <CategorySidebar
-                tree={tree}
-                currentCode={selectedCategory ?? undefined}
-                counts={aggregatedCounts}
-                onSelect={handleCategorySelect}
-              />
-            )}
-
-            <hr className="my-4 border-gray-200" />
-
+          {/* Sidebar — colors + brands, hidden on mobile */}
+          <aside className="hidden w-56 shrink-0 lg:block sticky top-36 self-start max-h-[calc(100vh-10rem)] overflow-y-auto">
             <ColorFilter
               colors={colorsForFilter}
               selectedCodes={selectedColors}
@@ -533,11 +523,6 @@ function SearchPageContent() {
       <FilterBottomSheet
         isOpen={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
-        categoryTree={tree}
-        currentCategory={selectedCategory}
-        categoryCounts={aggregatedCounts}
-        onCategorySelect={handleCategorySelect}
-        isCategoryLoading={isCategoryLoading}
         brands={brandsForFilter}
         selectedBrands={selectedBrands}
         onBrandToggle={handleBrandToggle}

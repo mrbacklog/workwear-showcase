@@ -534,7 +534,7 @@ export default function ProductClient() {
   if (isLoading) {
     return (
       <>
-        <Header searchValue={headerSearch} onSearchChange={handleSearchChange} />
+        <Header searchValue={headerSearch} onSearchChange={handleSearchChange} categoryTree={categoryTree} />
         <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
           <div className="animate-pulse">
             <div className="h-6 w-32 rounded bg-gray-100" />
@@ -555,7 +555,7 @@ export default function ProductClient() {
   if (!model) {
     return (
       <>
-        <Header searchValue={headerSearch} onSearchChange={handleSearchChange} />
+        <Header searchValue={headerSearch} onSearchChange={handleSearchChange} categoryTree={categoryTree} />
         <div className="mx-auto max-w-[1600px] px-4 py-24 text-center sm:px-6 lg:px-8">
           <h1 className="text-2xl font-bold text-gray-900">
             Product niet gevonden
@@ -579,7 +579,7 @@ export default function ProductClient() {
 
   return (
     <>
-      <Header searchValue={headerSearch} onSearchChange={handleSearchChange} />
+      <Header searchValue={headerSearch} onSearchChange={handleSearchChange} categoryTree={categoryTree} />
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         {/* Back link */}
