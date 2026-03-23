@@ -37,22 +37,22 @@ export function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 h-14 bg-white transition-shadow duration-200 ${
-        scrolled ? 'shadow-sm border-b border-gray-200' : 'border-b border-gray-100'
+      className={`fixed top-0 left-0 right-0 z-50 h-20 bg-black transition-shadow duration-200 ${
+        scrolled ? 'shadow-lg shadow-black/30' : ''
       }`}
     >
-      <div className="mx-auto flex h-full max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-        {/* Logo / Brand */}
-        <Link
-          href="/"
-          className="shrink-0 text-sm font-semibold tracking-tight text-gray-900 hover:text-gray-600 transition-colors"
-        >
-          <span className="hidden sm:inline">Workwear Showcase</span>
-          <span className="sm:hidden font-bold text-base">WW</span>
+      <div className="mx-auto flex h-full max-w-[1600px] items-center gap-4 px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
+        <Link href="/" className="shrink-0 transition-opacity hover:opacity-80">
+          <img
+            src="/logo-vankruiningen.png"
+            alt="Van Kruiningen Reklame"
+            className="h-10 sm:h-12 w-auto"
+          />
         </Link>
 
         {/* Divider — desktop only */}
-        <div className="hidden sm:block h-5 w-px bg-gray-200 shrink-0" />
+        <div className="hidden sm:block h-8 w-px bg-gray-700 shrink-0" />
 
         {/* Search — takes remaining space */}
         <div className="flex-1 min-w-0">

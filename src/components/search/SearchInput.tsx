@@ -17,7 +17,7 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div className="relative w-full">
-      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
         <svg
           className="h-4 w-4 text-gray-400"
           fill="none"
@@ -40,7 +40,7 @@ export function SearchInput({
         onFocus={onFocus}
         onBlur={onBlur}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-100"
+        className="w-full rounded-full border border-gray-700 bg-white/10 py-2.5 pl-11 pr-5 text-sm text-white placeholder-gray-500 transition-colors focus:border-amber-500 focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
       />
     </div>
   );

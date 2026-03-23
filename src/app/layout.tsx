@@ -63,7 +63,7 @@ export default function RootLayout({
         <div className="page-loading-bar" aria-hidden="true" />
         <ShowcaseAuthProvider>
           {/* Header is rendered per-page because it requires client state (search input) */}
-          <main className="flex-1 pt-16">{children}</main>
+          <main className="flex-1 pt-20">{children}</main>
           <Footer />
           <ShowcasePinModal />
         </ShowcaseAuthProvider>

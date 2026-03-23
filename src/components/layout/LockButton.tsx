@@ -11,7 +11,7 @@ export function LockButton() {
         type="button"
         onClick={lock}
         title="Vergrendelen"
-        className="rounded-lg p-2 text-green-600 hover:bg-gray-100 transition-colors"
+        className="rounded-lg p-2 text-green-400 hover:bg-white/10 transition-colors"
       >
         <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path
@@ -29,7 +29,7 @@ export function LockButton() {
       type="button"
       onClick={openPinModal}
       title="Ontgrendelen"
-      className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+      className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-gray-200 transition-colors"
     >
       <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
         <path
