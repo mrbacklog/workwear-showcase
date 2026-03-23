@@ -66,10 +66,6 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
   const priceText =
     minPrice === maxPrice ? formatPrice(minPrice) : formatPriceRange(minPrice, maxPrice);
 
-  const singleVariantName = model.colorGroups.length === 1
-    ? (model.colorGroups[0].colorName || model.colorGroups[0].colorRaw)
-    : null;
-
   const imageNode = displayImage ? (
     <ProductImage
       src={displayImage.thumb400Webp}
@@ -125,11 +121,6 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
           <h3 className="mt-0.5 text-sm font-medium text-gray-900 group-hover:text-gray-700 truncate">
             {model.modelName}
           </h3>
-          {singleVariantName && (
-            <p className="mt-1 text-xs italic text-gray-400">
-              {singleVariantName} — enige uitvoering
-            </p>
-          )}
         </div>
       </Link>
     );
@@ -169,10 +160,6 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
                   thumbSize={40}
                 />
               </div>
-            ) : singleVariantName ? (
-              <p className="mt-1.5 text-xs italic text-gray-400">
-                {singleVariantName} — enige uitvoering
-              </p>
             ) : null}
           </div>
         </div>
@@ -214,10 +201,6 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
               activeIndex={hoveredIndex}
               thumbSize={44}
             />
-          ) : singleVariantName ? (
-            <p className="text-xs italic text-gray-400 pt-3">
-              {singleVariantName} — enige uitvoering
-            </p>
           ) : null}
         </div>
       </div>
