@@ -14,6 +14,7 @@ export type TabKey = 'status' | 'category' | 'name' | 'cover' | 'enrichment';
 interface EnrichmentActions {
   status: string;
   proposals: EnrichmentProposal[];
+  notFoundFields: string[];
   onTrigger: () => void;
   onAcceptField: (proposalId: string, fieldProposalId: string) => void;
   onRejectField: (proposalId: string, fieldProposalId: string) => void;
@@ -155,10 +156,10 @@ function FieldRow({
       <td className="py-2 pr-3 text-sm font-medium text-gray-700 whitespace-nowrap">
         {FIELD_LABELS[field.fieldName] || field.fieldName}
       </td>
-      <td className="py-2 pr-3 text-sm text-gray-400 max-w-[100px] truncate" title={field.currentValue || '-'}>
+      <td className="py-2 pr-3 text-sm text-gray-400 max-w-[140px] truncate" title={field.currentValue || '-'}>
         {field.currentValue || '-'}
       </td>
-      <td className="py-2 pr-3 text-sm text-gray-900 max-w-[180px]">
+      <td className="py-2 pr-3 text-sm text-gray-900 max-w-[280px]">
         <span className="line-clamp-2" title={field.proposedValue}>
           {field.proposedValue}
         </span>
@@ -272,7 +273,7 @@ function ImageCard({
 // ---------------------------------------------------------------------------
 
 function EnrichmentTabContent({ enrichment }: { enrichment: EnrichmentActions }) {
-  const { status, proposals, onTrigger, onAcceptField, onRejectField, onAcceptImage, onRejectImage, onBulkAccept } = enrichment;
+  const { status, proposals, notFoundFields, onTrigger, onAcceptField, onRejectField, onAcceptImage, onRejectImage, onBulkAccept } = enrichment;
 
   const isTriggering = status === 'triggering';
   const isProcessing = status === 'processing';
@@ -402,6 +403,28 @@ function EnrichmentTabContent({ enrichment }: { enrichment: EnrichmentActions })
                 onAccept={() => onAcceptImage(latestProposal.id, ip.id)}
                 onReject={() => onRejectImage(latestProposal.id, ip.id)}
               />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Not-found fields */}
+      {notFoundFields.length > 0 && (
+        <div>
+          <h4 className="mb-2 text-xs font-medium text-gray-400 uppercase tracking-wider">
+            Niet gevonden bij externe bronnen
+          </h4>
+          <div className="space-y-1">
+            {notFoundFields.map((field) => (
+              <div key={field} className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                <svg className="h-4 w-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+                </svg>
+                <span className="text-sm text-gray-400">
+                  {FIELD_LABELS[field] || field}
+                </span>
+                <span className="ml-auto text-xs text-gray-300">&mdash;</span>
+              </div>
             ))}
           </div>
         </div>
@@ -549,7 +572,7 @@ export function ChangeRequestModal({
         if (e.target === e.currentTarget && !isLoading) onClose();
       }}
     >
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-4xl rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4 flex-shrink-0">
           <div>

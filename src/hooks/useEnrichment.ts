@@ -29,6 +29,7 @@ export interface UseEnrichmentReturn {
   status: EnrichmentFlowStatus;
   enrichmentData: EnrichmentStatusResponse | null;
   proposals: EnrichmentProposal[];
+  notFoundFields: string[];
   errorMessage: string | null;
   trigger: (modelId: string) => void;
   checkStatus: (modelId: string) => void;
@@ -280,6 +281,7 @@ export function useEnrichment(): UseEnrichmentReturn {
     status,
     enrichmentData,
     proposals: enrichmentData?.proposals ?? [],
+    notFoundFields: enrichmentData?.notFoundFields ?? [],
     errorMessage,
     trigger,
     checkStatus,

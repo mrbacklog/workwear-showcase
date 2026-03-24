@@ -547,6 +547,7 @@ export default function ProductClient() {
         enrichment={{
           status: enrichment.status,
           proposals: enrichment.proposals,
+          notFoundFields: enrichment.notFoundFields,
           onTrigger: () => enrichment.trigger(modelId),
           onAcceptField: enrichment.acceptField,
           onRejectField: enrichment.rejectField,

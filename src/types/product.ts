@@ -236,5 +236,6 @@ export interface EnrichmentStatusResponse {
   requestId: string | null;
   status: EnrichmentStatus;
   proposals: EnrichmentProposal[];
+  notFoundFields: string[];
 }
 
