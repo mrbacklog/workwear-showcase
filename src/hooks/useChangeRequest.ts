@@ -2,11 +2,11 @@
 
 import { useState, useCallback, useRef } from 'react';
 import {
-  authenticateWithPin,
   createChangeRequest,
   withdrawChangeRequest,
 } from '@/lib/change-request-api';
 import type { UsePendingRequestsReturn } from './usePendingRequests';
+import type { TabKey } from '@/components/change-request/ChangeRequestModal';
 
 const SESSION_KEY = 'showcase_session';
 
@@ -18,8 +18,6 @@ interface Session {
 export type ChangeRequestFlowStatus =
   | 'idle'
   | 'modal_open'
-  | 'needs_pin'
-  | 'authenticating'
   | 'submitting'
   | 'withdrawing'
   | 'confirm_withdraw'
@@ -42,18 +40,18 @@ export interface UseChangeRequestReturn {
   status: ChangeRequestFlowStatus;
   /** The model ID currently being acted on */
   activeModelId: string | null;
-  /** Open the change request modal for a model */
-  startChangeRequest: (modelId: string) => void;
-  /** Submit the change request (may trigger PIN first) */
+  /** The initial tab to open in the change request modal */
+  initialTab: TabKey | null;
+  /** Open the change request modal for a model, optionally with an initial tab */
+  startChangeRequest: (modelId: string, tab?: TabKey) => void;
+  /** Submit the change request */
   submitChangeRequest: (data: ChangeRequestData) => void;
   /** Start withdraw flow for a pending request */
   startWithdraw: (modelId: string) => void;
   /** Confirm the withdrawal */
   confirmWithdraw: () => void;
-  /** Cancel current flow (close modal / cancel PIN / cancel withdraw) */
+  /** Cancel current flow (close modal / cancel withdraw) */
   cancel: () => void;
-  /** Submit PIN code */
-  submitPin: (pin: string) => void;
   /** Toast messages */
   toasts: ToastMessage[];
   dismissToast: (id: number) => void;
@@ -80,18 +78,6 @@ function getValidSession(): Session | null {
   }
 }
 
-function saveSession(token: string, expiresInSeconds: number): void {
-  const session: Session = {
-    token,
-    expiresAt: Date.now() + expiresInSeconds * 1000,
-  };
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  } catch {
-    // localStorage unavailable
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -103,6 +89,7 @@ export function useChangeRequest(
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [activeModelId, setActiveModelId] = useState<string | null>(null);
+  const [initialTab, setInitialTab] = useState<TabKey | null>(null);
 
   const pendingDataRef = useRef<ChangeRequestData | null>(null);
   const toastIdCounter = useRef(0);
@@ -164,8 +151,10 @@ export function useChangeRequest(
           } catch {
             /* noop */
           }
-          setStatus('needs_pin');
-          setErrorMessage(null);
+          addToast('error', 'Sessie verlopen, ontgrendel opnieuw via het slot-icoontje');
+          setStatus('idle');
+          setActiveModelId(null);
+          pendingDataRef.current = null;
         } else {
           addToast('error', message);
           setStatus('idle');
@@ -202,13 +191,12 @@ export function useChangeRequest(
           } catch {
             /* noop */
           }
-          setStatus('needs_pin');
-          setErrorMessage(null);
+          addToast('error', 'Sessie verlopen, ontgrendel opnieuw via het slot-icoontje');
         } else {
           addToast('error', message);
-          setStatus('idle');
-          setActiveModelId(null);
         }
+        setStatus('idle');
+        setActiveModelId(null);
       }
     },
     [addToast, pending],
@@ -218,8 +206,9 @@ export function useChangeRequest(
   // Public interface
   // -------------------------------------------------------------------------
 
-  const startChangeRequest = useCallback((modelId: string) => {
+  const startChangeRequest = useCallback((modelId: string, tab?: TabKey) => {
     setActiveModelId(modelId);
+    setInitialTab(tab ?? null);
     setErrorMessage(null);
     setStatus('modal_open');
   }, []);
@@ -236,11 +225,13 @@ export function useChangeRequest(
           busyRef.current = false;
         });
       } else {
-        setStatus('needs_pin');
-        setErrorMessage(null);
+        addToast('error', 'Sessie verlopen, ontgrendel opnieuw via het slot-icoontje');
+        setStatus('idle');
+        setActiveModelId(null);
+        pendingDataRef.current = null;
       }
     },
-    [activeModelId, performCreate],
+    [activeModelId, addToast, performCreate],
   );
 
   const startWithdraw = useCallback((modelId: string) => {
@@ -259,71 +250,29 @@ export function useChangeRequest(
         busyRef.current = false;
       });
     } else {
-      setStatus('needs_pin');
-      setErrorMessage(null);
+      addToast('error', 'Sessie verlopen, ontgrendel opnieuw via het slot-icoontje');
+      setStatus('idle');
+      setActiveModelId(null);
     }
-  }, [activeModelId, performWithdraw]);
+  }, [activeModelId, addToast, performWithdraw]);
 
   const cancel = useCallback(() => {
     setStatus('idle');
     setActiveModelId(null);
+    setInitialTab(null);
     setErrorMessage(null);
     pendingDataRef.current = null;
   }, []);
 
-  const submitPin = useCallback(
-    async (pin: string) => {
-      if (busyRef.current) return;
-      busyRef.current = true;
-      setStatus('authenticating');
-      setErrorMessage(null);
-
-      try {
-        const authResult = await authenticateWithPin(pin);
-        saveSession(authResult.token, authResult.expires_in);
-
-        if (!activeModelId) {
-          setStatus('idle');
-          busyRef.current = false;
-          return;
-        }
-
-        // Check if we're in a withdraw or create flow
-        const pendingReq = pending.getPending(activeModelId);
-        if (pendingReq && !pendingDataRef.current) {
-          // Withdraw flow
-          await performWithdraw(activeModelId, authResult.token);
-        } else if (pendingDataRef.current) {
-          // Create flow
-          await performCreate(
-            activeModelId,
-            pendingDataRef.current,
-            authResult.token,
-          );
-        } else {
-          setStatus('idle');
-        }
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Authenticatie mislukt';
-        setErrorMessage(message);
-        setStatus('needs_pin');
-      } finally {
-        busyRef.current = false;
-      }
-    },
-    [activeModelId, pending, performCreate, performWithdraw],
-  );
-
   return {
     status,
     activeModelId,
+    initialTab,
     startChangeRequest,
     submitChangeRequest,
     startWithdraw,
     confirmWithdraw,
     cancel,
-    submitPin,
     toasts,
     dismissToast,
     errorMessage,

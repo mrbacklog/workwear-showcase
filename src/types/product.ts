@@ -122,6 +122,18 @@ export interface ShowcaseModel {
   publicationStatus: PublicationStatus;
   /** Total number of variants (EANs) across all color groups */
   variantCount: number;
+  /** Material/fabric composition */
+  material: string | null;
+  /** Gender (Heren/Dames/Unisex) */
+  gender: string | null;
+  /** Safety norms (EN ISO codes) */
+  safetyNorms: string | null;
+  /** Care/wash instructions */
+  careInstructions: string | null;
+  /** Country of origin */
+  countryOfOrigin: string | null;
+  /** Fabric type and weight */
+  fabricTypeWeight: string | null;
   /** Variants grouped by color */
   colorGroups: ColorGroup[];
 }

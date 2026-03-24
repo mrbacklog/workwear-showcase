@@ -101,6 +101,12 @@ interface ShowcaseModel {
   shortDescriptionNl: string | null;
   publicationStatus: string;
   variantCount: number;
+  material: string | null;
+  gender: string | null;
+  safetyNorms: string | null;
+  careInstructions: string | null;
+  countryOfOrigin: string | null;
+  fabricTypeWeight: string | null;
   colorGroups: ShowcaseColorGroup[];
 }
 
@@ -179,6 +185,12 @@ interface FrontendModel {
   shortDescriptionNl: string;
   publicationStatus: string;
   variantCount: number;
+  material: string | null;
+  gender: string | null;
+  safetyNorms: string | null;
+  careInstructions: string | null;
+  countryOfOrigin: string | null;
+  fabricTypeWeight: string | null;
   colorGroups: FrontendColorGroup[];
 }
 
@@ -471,6 +483,12 @@ function transformModel(model: ShowcaseModel): FrontendModel {
     shortDescriptionNl: model.shortDescriptionNl ?? '',
     publicationStatus: model.publicationStatus,
     variantCount: model.variantCount,
+    material: model.material ?? null,
+    gender: model.gender ?? null,
+    safetyNorms: model.safetyNorms ?? null,
+    careInstructions: model.careInstructions ?? null,
+    countryOfOrigin: model.countryOfOrigin ?? null,
+    fabricTypeWeight: model.fabricTypeWeight ?? null,
     colorGroups,
   };
 }
