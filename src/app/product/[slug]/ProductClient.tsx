@@ -16,6 +16,9 @@ import { usePendingRequests } from '@/hooks/usePendingRequests';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
 import { useImageUrl } from '@/hooks/useImageUrl';
+import { useEnrichment } from '@/hooks/useEnrichment';
+import { EnrichButton } from '@/components/enrichment/EnrichButton';
+import { EnrichmentPanel } from '@/components/enrichment/EnrichmentPanel';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
 import type { ColorGroup, ShowcaseImage, ShowcaseModel } from '@/types/product';
@@ -487,6 +490,8 @@ export default function ProductClient() {
   const changeRequest = useChangeRequest(pendingRequests);
   const { tree: categoryTree } = useCategoryTree();
   const { isUnlocked } = useShowcaseAuth();
+  const enrichment = useEnrichment();
+  const [showEnrichmentPanel, setShowEnrichmentPanel] = useState(false);
 
   const model = getBySlug(slug);
 
@@ -506,6 +511,20 @@ export default function ProductClient() {
       if (idx >= 0) setSelectedColorIndex(idx);
     }
   }, [model]);
+
+  // Check enrichment status on model load (for authenticated users)
+  useEffect(() => {
+    if (model && isUnlocked) {
+      enrichment.checkStatus(model.id);
+    }
+  }, [model?.id, isUnlocked]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-show panel when enrichment completes
+  useEffect(() => {
+    if (enrichment.status === 'completed' && enrichment.proposals.length > 0) {
+      setShowEnrichmentPanel(true);
+    }
+  }, [enrichment.status, enrichment.proposals.length]);
 
   const handleSearchChange = useCallback((value: string) => {
     setHeaderSearch(value);
@@ -612,6 +631,12 @@ export default function ProductClient() {
                     onRequestChange={() => changeRequest.startChangeRequest(modelId)}
                     onWithdraw={() => changeRequest.startWithdraw(modelId)}
                   />
+                  <EnrichButton
+                    status={enrichment.status}
+                    hasProposals={enrichment.proposals.length > 0}
+                    onTrigger={() => enrichment.trigger(modelId)}
+                    onViewProposals={() => setShowEnrichmentPanel(true)}
+                  />
                 </div>
               ) : undefined}
             />
@@ -646,6 +671,19 @@ export default function ProductClient() {
             <hr className="border-gray-200" />
 
             <ProductAttributes model={model} />
+
+            {/* Enrichment panel */}
+            {isUnlocked && showEnrichmentPanel && enrichment.proposals.length > 0 && (
+              <EnrichmentPanel
+                proposals={enrichment.proposals}
+                isReviewing={enrichment.status === 'reviewing'}
+                onAcceptField={enrichment.acceptField}
+                onRejectField={enrichment.rejectField}
+                onAcceptImage={enrichment.acceptImage}
+                onRejectImage={enrichment.rejectImage}
+                onBulkAccept={enrichment.bulkAccept}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -656,6 +694,7 @@ export default function ProductClient() {
         isLoading={changeRequest.status === 'submitting'}
         model={model}
         categoryTree={categoryTree}
+        selectedColorGroupIndex={selectedColorIndex}
         onSubmit={changeRequest.submitChangeRequest}
         onClose={changeRequest.cancel}
       />
@@ -668,13 +707,29 @@ export default function ProductClient() {
         onClose={changeRequest.cancel}
       />
 
-      {/* PIN Modal (shared by create + withdraw flows) */}
+      {/* PIN Modal (shared by create + withdraw + enrichment flows) */}
       <PinModal
-        isOpen={changeRequest.status === 'needs_pin' || changeRequest.status === 'authenticating'}
+        isOpen={
+          changeRequest.status === 'needs_pin' ||
+          changeRequest.status === 'authenticating' ||
+          enrichment.status === 'needs_pin'
+        }
         isLoading={changeRequest.status === 'authenticating'}
-        errorMessage={changeRequest.errorMessage}
-        onSubmit={changeRequest.submitPin}
-        onClose={changeRequest.cancel}
+        errorMessage={changeRequest.errorMessage || enrichment.errorMessage}
+        onSubmit={(pin) => {
+          if (enrichment.status === 'needs_pin') {
+            enrichment.submitPin(pin);
+          } else {
+            changeRequest.submitPin(pin);
+          }
+        }}
+        onClose={() => {
+          if (enrichment.status === 'needs_pin') {
+            enrichment.cancel();
+          } else {
+            changeRequest.cancel();
+          }
+        }}
       />
 
       <ToastContainer toasts={changeRequest.toasts} onDismiss={changeRequest.dismissToast} />

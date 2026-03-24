@@ -12,6 +12,12 @@ const CHANGE_LABELS: Record<string, Record<string, string>> = {
   category_change: {
     _default: 'Categorie wijzigen',
   },
+  name_change: {
+    _default: 'Naam wijzigen',
+  },
+  cover_change: {
+    _default: 'Omslagfoto wijzigen',
+  },
 };
 
 function getChangeLabel(req: PendingChangeRequest): string {

@@ -38,6 +38,8 @@ export interface ShowcaseVariant {
 export type ImageType = 'front' | 'back' | 'side' | 'detail' | 'lifestyle' | 'default' | 'left' | 'right' | 'top' | 'bottom' | null;
 
 export interface ShowcaseImage {
+  /** Image UUID for cover_change requests */
+  id: string;
   /** EAN of the variant this image belongs to */
   ean: string;
   /** Sequence number for ordering (1-based) */
@@ -52,6 +54,8 @@ export interface ShowcaseImage {
   thumb400Webp: string;
   /** R2 WebP large thumbnail (800w) for product detail */
   thumb800Webp: string;
+  /** Whether this image is the current cover for its color group */
+  isCover: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,7 +149,7 @@ export interface CategoryNode {
 // Change requests
 // ---------------------------------------------------------------------------
 
-export type ChangeType = 'status_change' | 'category_change';
+export type ChangeType = 'status_change' | 'category_change' | 'name_change' | 'cover_change';
 
 export type ChangeRequestStatus =
   | 'pending'
@@ -179,5 +183,46 @@ export interface SyncManifest {
   totalModels: number;
   /** Total number of images in the showcase */
   totalImages: number;
+}
+
+// ---------------------------------------------------------------------------
+// Enrichment
+// ---------------------------------------------------------------------------
+
+export type EnrichmentStatus = 'none' | 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface FieldProposal {
+  id: string;
+  fieldName: string;
+  currentValue: string | null;
+  proposedValue: string;
+  confidence: number | null;
+  consensusStatus: 'consensus' | 'single_source' | 'conflict';
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+export interface ImageProposal {
+  id: string;
+  imageUrl: string;
+  shotType: string | null;
+  coverScore: number | null;
+  source: string;
+  resolutionWidth: number | null;
+  resolutionHeight: number | null;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+export interface EnrichmentProposal {
+  id: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'partial';
+  createdAt: string | null;
+  fieldProposals: FieldProposal[];
+  imageProposals: ImageProposal[];
+}
+
+export interface EnrichmentStatusResponse {
+  requestId: string | null;
+  status: EnrichmentStatus;
+  proposals: EnrichmentProposal[];
 }
 

@@ -10,9 +10,12 @@ interface ChangeRequestModalProps {
   isLoading: boolean;
   model: ShowcaseModel;
   categoryTree: CategoryNode[];
+  selectedColorGroupIndex: number;
   onSubmit: (data: ChangeRequestData) => void;
   onClose: () => void;
 }
+
+type Tab = 'status' | 'category' | 'name' | 'cover';
 
 // Status change options based on current publication status
 const STATUS_OPTIONS: Record<
@@ -50,12 +53,15 @@ export function ChangeRequestModal({
   isLoading,
   model,
   categoryTree,
+  selectedColorGroupIndex,
   onSubmit,
   onClose,
 }: ChangeRequestModalProps) {
-  const [tab, setTab] = useState<'status' | 'category'>('status');
+  const [tab, setTab] = useState<Tab>('status');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [newName, setNewName] = useState('');
+  const [selectedImageId, setSelectedImageId] = useState('');
   const [note, setNote] = useState('');
 
   // Reset form when modal opens
@@ -64,6 +70,8 @@ export function ChangeRequestModal({
       setTab('status');
       setSelectedStatus('');
       setSelectedCategory('');
+      setNewName('');
+      setSelectedImageId('');
       setNote('');
     }
   }, [isOpen]);
@@ -81,10 +89,16 @@ export function ChangeRequestModal({
   if (!isOpen) return null;
 
   const statusOptions = STATUS_OPTIONS[model.publicationStatus] ?? [];
+  const currentColorGroup = model.colorGroups[selectedColorGroupIndex];
+  const images = currentColorGroup?.images ?? [];
+  const hasImageIds = images.some((img) => img.id && img.id !== '');
+
   const canSubmit =
     !isLoading &&
     ((tab === 'status' && selectedStatus !== '') ||
-      (tab === 'category' && selectedCategory !== ''));
+      (tab === 'category' && selectedCategory !== '') ||
+      (tab === 'name' && newName.trim() !== '' && newName.trim() !== model.modelName) ||
+      (tab === 'cover' && selectedImageId !== ''));
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -94,14 +108,33 @@ export function ChangeRequestModal({
         requestedValue: selectedStatus,
         note: note.trim() || undefined,
       });
-    } else {
+    } else if (tab === 'category') {
       onSubmit({
         changeType: 'category_change',
         requestedValue: selectedCategory,
         note: note.trim() || undefined,
       });
+    } else if (tab === 'name') {
+      onSubmit({
+        changeType: 'name_change',
+        requestedValue: newName.trim(),
+        note: note.trim() || undefined,
+      });
+    } else if (tab === 'cover') {
+      onSubmit({
+        changeType: 'cover_change',
+        requestedValue: selectedImageId,
+        note: note.trim() || undefined,
+      });
     }
   };
+
+  const TABS: Array<{ key: Tab; label: string }> = [
+    { key: 'status', label: 'Status' },
+    { key: 'category', label: 'Categorie' },
+    { key: 'name', label: 'Naam' },
+    { key: 'cover', label: 'Foto' },
+  ];
 
   return (
     <div
@@ -123,32 +156,25 @@ export function ChangeRequestModal({
 
         {/* Tab selector */}
         <div className="flex border-b border-gray-200">
-          <button
-            type="button"
-            onClick={() => setTab('status')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              tab === 'status'
-                ? 'border-b-2 border-gray-900 text-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Status wijzigen
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('category')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              tab === 'category'
-                ? 'border-b-2 border-gray-900 text-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Categorie wijzigen
-          </button>
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`flex-1 px-3 py-3 text-sm font-medium transition-colors ${
+                tab === t.key
+                  ? 'border-b-2 border-gray-900 text-gray-900'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
         <div className="px-6 py-4 space-y-4">
+          {/* Status tab */}
           {tab === 'status' && (
             <div className="space-y-2">
               <p className="text-sm text-gray-500">
@@ -195,6 +221,7 @@ export function ChangeRequestModal({
             </div>
           )}
 
+          {/* Category tab */}
           {tab === 'category' && (
             <div className="space-y-2">
               <p className="text-sm text-gray-500">
@@ -212,6 +239,101 @@ export function ChangeRequestModal({
                 <p className="text-xs text-green-700">
                   Geselecteerd: {selectedCategory}
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* Name tab */}
+          {tab === 'name' && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">
+                Huidige naam:{' '}
+                <span className="font-medium text-gray-700">
+                  {model.modelName}
+                </span>
+              </p>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                maxLength={500}
+                placeholder="Nieuwe productnaam..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500/20"
+              />
+              <div className="flex justify-between">
+                <p className="text-xs text-gray-400">
+                  {newName.trim() === model.modelName
+                    ? 'Naam moet anders zijn dan de huidige naam'
+                    : '\u00A0'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {newName.length}/500
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Cover image tab */}
+          {tab === 'cover' && (
+            <div className="space-y-2">
+              {!hasImageIds ? (
+                <p className="text-sm text-gray-400">
+                  Omslagfoto wijzigen is pas beschikbaar na de volgende sync.
+                </p>
+              ) : images.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  Geen afbeeldingen beschikbaar voor deze kleurgroep.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-500">
+                    Selecteer een afbeelding als omslagfoto voor{' '}
+                    <span className="font-medium text-gray-700">
+                      {currentColorGroup?.colorName || currentColorGroup?.colorRaw || 'deze kleur'}
+                    </span>
+                  </p>
+                  <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                    {images.map((img) => {
+                      const isCurrentCover = img.isCover;
+                      const isSelected = selectedImageId === img.id;
+                      return (
+                        <button
+                          key={img.id}
+                          type="button"
+                          onClick={() => {
+                            if (!isCurrentCover) setSelectedImageId(img.id);
+                          }}
+                          disabled={isCurrentCover}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            isSelected
+                              ? 'border-gray-900 ring-2 ring-gray-900/20'
+                              : isCurrentCover
+                                ? 'border-green-500 opacity-75 cursor-default'
+                                : 'border-gray-200 hover:border-gray-400 cursor-pointer'
+                          }`}
+                        >
+                          <img
+                            src={img.thumb400Webp}
+                            alt={`${img.imageType || 'product'}`}
+                            className="h-full w-full object-cover"
+                          />
+                          {isCurrentCover && (
+                            <span className="absolute bottom-0 left-0 right-0 bg-green-600 px-1 py-0.5 text-[10px] font-medium text-white text-center">
+                              Huidig
+                            </span>
+                          )}
+                          {isSelected && (
+                            <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-900 text-white">
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
           )}

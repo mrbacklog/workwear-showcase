@@ -54,12 +54,14 @@ interface ShowcaseCategory {
 }
 
 interface ShowcaseImage {
+  id?: string;
   ean: string;
   sequenceNumber: number;
   imageType: string | null;
   webpBase64: string | null;
   thumbBase64: string | null;
   r2Key?: string;
+  isCover?: boolean;
 }
 
 interface ShowcaseVariant {
@@ -152,6 +154,7 @@ interface FrontendColorGroup {
     priceCents: number;
   }[];
   images: {
+    id: string;
     ean: string;
     sequenceNumber: number;
     imageType: string;
@@ -159,6 +162,7 @@ interface FrontendColorGroup {
     thumbWebp: string;       // 80px
     thumb400Webp: string;    // 400px
     thumb800Webp: string;    // 800px
+    isCover: boolean;
   }[];
 }
 
@@ -431,6 +435,7 @@ function transformModel(model: ShowcaseModel): FrontendModel {
     images: cg.images.map((img) => {
       const r2Key = img.r2Key || `${img.ean}-${img.sequenceNumber}`;
       return {
+        id: img.id ?? '',
         ean: img.ean,
         sequenceNumber: img.sequenceNumber,
         imageType: img.imageType ?? 'front',
@@ -438,6 +443,7 @@ function transformModel(model: ShowcaseModel): FrontendModel {
         thumbWebp: `${R2_PUBLIC_URL}/80/${r2Key}.webp`,
         thumb400Webp: `${R2_PUBLIC_URL}/400/${r2Key}.webp`,
         thumb800Webp: `${R2_PUBLIC_URL}/800/${r2Key}.webp`,
+        isCover: img.isCover ?? false,
       };
     }),
   }));

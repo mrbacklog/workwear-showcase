@@ -33,7 +33,7 @@ export interface ToastMessage {
 }
 
 export interface ChangeRequestData {
-  changeType: 'status_change' | 'category_change';
+  changeType: 'status_change' | 'category_change' | 'name_change' | 'cover_change';
   requestedValue: string;
   note?: string;
 }
