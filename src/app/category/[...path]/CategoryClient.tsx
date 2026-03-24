@@ -44,9 +44,9 @@ function Breadcrumbs({ path }: { path: CategoryNode[] }) {
             {idx === path.length - 1 ? (
               <span className="font-medium text-gray-900">{node.nameNl}</span>
             ) : (
-              <a href={`/category/${node.code}/`} className="hover:text-gray-700">
+              <Link href={`/category/${node.code}/`} className="hover:text-gray-700">
                 {node.nameNl}
-              </a>
+              </Link>
             )}
           </li>
         ))}

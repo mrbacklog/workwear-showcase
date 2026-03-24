@@ -5,10 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { compareSizes } from '@/lib/size-sort';
 import { Header } from '@/components/layout/Header';
 import { ProductHeader } from '@/components/product/ProductHeader';
-import { ChangeRequestButton } from '@/components/change-request/ChangeRequestButton';
+import { ProductSpecs } from '@/components/product/ProductSpecs';
+import { EanPopover } from '@/components/product/EanPopover';
+import { ActionMenu } from '@/components/change-request/ActionMenu';
 import { ChangeRequestModal, WithdrawDialog } from '@/components/change-request/ChangeRequestModal';
-import { PendingIndicator } from '@/components/change-request/PendingIndicator';
-import { PinModal } from '@/components/change-request/PinModal';
 import { ToastContainer } from '@/components/change-request/Toast';
 import { useModelCards } from '@/hooks/useModelCards';
 import { useChangeRequest } from '@/hooks/useChangeRequest';
@@ -17,11 +17,9 @@ import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
 import { useImageUrl } from '@/hooks/useImageUrl';
 import { useEnrichment } from '@/hooks/useEnrichment';
-import { EnrichButton } from '@/components/enrichment/EnrichButton';
-import { EnrichmentPanel } from '@/components/enrichment/EnrichmentPanel';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
-import type { ColorGroup, ShowcaseImage, ShowcaseModel } from '@/types/product';
+import type { ColorGroup, ShowcaseImage, ShowcaseModel, ShowcaseVariant } from '@/types/product';
 
 // ---------------------------------------------------------------------------
 // Product Gallery
@@ -39,7 +37,6 @@ function ProductGallery({
   const [fullLoaded, setFullLoaded] = useState(false);
   const { getOriginalImageUrl } = useImageUrl();
 
-  // Reset fullLoaded when switching images
   useEffect(() => {
     setFullLoaded(false);
   }, [selectedIndex]);
@@ -57,16 +54,14 @@ function ProductGallery({
 
   return (
     <div className="space-y-3">
-      {/* Main image: full-size from API with thumb placeholder */}
       <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-50">
         <ProductImage
           src={mainImage.thumb800Webp}
           alt={modelName}
           className={`h-full w-full object-contain transition-opacity duration-200 ${fullLoaded ? 'opacity-0' : 'opacity-100'}`}
           priority={true}
-          sizes="(max-width: 768px) 100vw, 50vw"
+          sizes="(max-width: 768px) 100vw, 35vw"
         />
-        {/* Full-size original from backend API */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={originalUrl}
@@ -75,7 +70,6 @@ function ProductGallery({
           onLoad={() => setFullLoaded(true)}
           onClick={() => setLightboxUrl(originalUrl)}
         />
-        {/* Zoom icon */}
         <button
           type="button"
           onClick={() => setLightboxUrl(originalUrl)}
@@ -88,7 +82,6 @@ function ProductGallery({
         </button>
       </div>
 
-      {/* Thumbnail strip */}
       {images.length > 1 && (
         <div className="flex gap-2 overflow-x-auto">
           {images.map((img, idx) => (
@@ -113,7 +106,6 @@ function ProductGallery({
         </div>
       )}
 
-      {/* Lightbox */}
       {lightboxUrl && (
         <ImageLightbox
           src={lightboxUrl}
@@ -126,146 +118,55 @@ function ProductGallery({
 }
 
 // ---------------------------------------------------------------------------
-// Color Selector (swatch dots with hover preview)
+// Expandable Description
 // ---------------------------------------------------------------------------
 
-function ColorSelector({
-  colorGroups,
-  selectedIndex,
-  onSelect,
-  onHover,
-  hoveredIndex,
-}: {
-  colorGroups: ColorGroup[];
-  selectedIndex: number;
-  onSelect: (index: number) => void;
-  onHover: (index: number | null) => void;
-  hoveredIndex: number | null;
-}) {
-  if (colorGroups.length <= 1) return null;
+function ExpandableDescription({ text }: { text: string | null }) {
+  const [expanded, setExpanded] = useState(false);
 
-  const displayIndex = hoveredIndex ?? selectedIndex;
-  const displayGroup = colorGroups[displayIndex];
+  if (!text) return null;
+
+  const isLong = text.length > 200;
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-gray-900">
-        Kleur: {displayGroup?.colorRaw || displayGroup?.colorName}
-      </h3>
-      <div
-        className="mt-2 flex items-center gap-3 overflow-x-auto pb-1"
-        style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
-      >
-        {colorGroups.map((cg, idx) => {
-          const isSelected = idx === selectedIndex;
-
-          return (
-            <button
-              key={cg.colorCode || cg.colorRaw}
-              type="button"
-              onClick={() => onSelect(idx)}
-              onMouseEnter={() => onHover(idx)}
-              onMouseLeave={() => onHover(null)}
-              title={cg.colorRaw || cg.colorName}
-              className="shrink-0"
-            >
-              <ColorSwatch
-                hexCode={cg.hexCode}
-                secondaryHex={cg.secondaryHex}
-                isActive={isSelected}
-                size="md"
-              />
-            </button>
-          );
-        })}
+      <h3 className="text-sm font-semibold text-gray-900 mb-1">Productomschrijving</h3>
+      <div className="relative">
+        <p
+          className={`text-sm leading-relaxed text-gray-600 whitespace-pre-line ${
+            !expanded && isLong ? 'max-h-[3.6em] overflow-hidden' : ''
+          }`}
+        >
+          {text}
+        </p>
+        {!expanded && isLong && (
+          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent" />
+        )}
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Variant Info Table (selected color only)
-// ---------------------------------------------------------------------------
-
-function VariantInfoTable({
-  colorGroup,
-  showPrices,
-}: {
-  colorGroup: ColorGroup;
-  showPrices: boolean;
-}) {
-  const [showEan, setShowEan] = useState(false);
-
-  const sortedVariants = useMemo(
-    () => [...colorGroup.variants].sort((a, b) => compareSizes(a.sizeRaw, b.sizeRaw)),
-    [colorGroup.variants],
-  );
-
-  if (colorGroup.variants.length === 0) {
-    return <p className="text-sm text-gray-400">Geen maten beschikbaar</p>;
-  }
-
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900">
-          Maten &mdash; {colorGroup.colorRaw || colorGroup.colorName}
-        </h3>
+      {isLong && (
         <button
           type="button"
-          onClick={() => setShowEan((v) => !v)}
-          className="text-xs text-gray-400 hover:text-gray-600 underline"
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs font-medium text-blue-600 hover:text-blue-800 mt-1"
         >
-          {showEan ? 'Verberg EAN' : 'Toon EAN'}
+          {expanded ? 'Minder tonen ▲' : 'Meer lezen ▼'}
         </button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="py-2 pr-4 text-left font-medium text-gray-500">
-                Maat
-              </th>
-              {showEan && (
-                <th className="py-2 pr-4 text-left font-medium text-gray-500">
-                  EAN
-                </th>
-              )}
-              {showPrices && (
-                <th className="py-2 text-right font-medium text-gray-500">
-                  Prijs
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {sortedVariants.map((v) => (
-              <tr key={v.ean}>
-                <td className="py-2 pr-4 font-medium text-gray-900">
-                  {v.sizeDisplay || v.sizeRaw}
-                </td>
-                {showEan && (
-                  <td className="py-2 pr-4 text-gray-500">{v.ean}</td>
-                )}
-                {showPrices && (
-                  <td className="py-2 text-right text-gray-900">
-                    {v.priceCents > 0
-                      ? `\u20AC ${(v.priceCents / 100).toFixed(2).replace('.', ',')}`
-                      : '\u2014'}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Color/Size Matrix (all colors x all sizes overview)
+// Color/Size Matrix (enhanced with EAN popover)
 // ---------------------------------------------------------------------------
+
+interface ActiveCell {
+  colorIdx: number;
+  size: string;
+  variant: ShowcaseVariant;
+  colorName: string;
+  anchorRect: DOMRect;
+}
 
 function ColorSizeMatrix({
   colorGroups,
@@ -278,7 +179,8 @@ function ColorSizeMatrix({
   onSelectColor: (index: number) => void;
   showPrices: boolean;
 }) {
-  // Collect all unique sizes across all color groups, sorted
+  const [activeCell, setActiveCell] = useState<ActiveCell | null>(null);
+
   const allSizes = useMemo(() => {
     const sizeSet = new Set<string>();
     for (const cg of colorGroups) {
@@ -289,24 +191,30 @@ function ColorSizeMatrix({
     return [...sizeSet].sort((a, b) => compareSizes(a, b));
   }, [colorGroups]);
 
+  const handleCellClick = useCallback(
+    (e: React.MouseEvent, colorIdx: number, size: string, variant: ShowcaseVariant, colorName: string) => {
+      e.stopPropagation(); // Don't trigger row click
+      const rect = (e.target as HTMLElement).getBoundingClientRect();
+      setActiveCell({ colorIdx, size, variant, colorName, anchorRect: rect });
+    },
+    [],
+  );
+
   if (colorGroups.length === 0 || allSizes.length === 0) return null;
 
   return (
     <div>
-      <h3 className="mb-2 text-sm font-medium text-gray-900">
-        Kleur / Maat overzicht
-      </h3>
       <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full text-xs">
+        <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-50">
-              <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-medium text-gray-500">
+              <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2.5 text-left font-semibold text-gray-700 border-b border-gray-200">
                 Kleur
               </th>
               {allSizes.map((size) => (
                 <th
                   key={size}
-                  className="px-2 py-2 text-center font-medium text-gray-500 whitespace-nowrap"
+                  className="px-2 py-2.5 text-center font-medium text-gray-500 whitespace-nowrap border-b border-gray-200"
                 >
                   {size}
                 </th>
@@ -316,24 +224,24 @@ function ColorSizeMatrix({
           <tbody className="divide-y divide-gray-100">
             {colorGroups.map((cg, idx) => {
               const isActive = idx === selectedColorIndex;
-              // Build a size -> variant lookup for this color group
-              const sizeMap = new Map<string, number>();
+              const variantMap = new Map<string, ShowcaseVariant>();
               for (const v of cg.variants) {
                 const key = v.sizeDisplay || v.sizeRaw;
-                sizeMap.set(key, v.priceCents);
+                variantMap.set(key, v);
               }
+              const colorName = cg.colorRaw || cg.colorName;
 
               return (
                 <tr
-                  key={cg.colorCode || cg.colorRaw || idx}
+                  key={`color-${idx}`}
                   onClick={() => onSelectColor(idx)}
                   className={`cursor-pointer transition-colors ${
                     isActive
-                      ? 'bg-gray-100 font-medium'
+                      ? 'bg-blue-50/50'
                       : 'hover:bg-gray-50'
                   }`}
                 >
-                  <td className="sticky left-0 z-10 bg-inherit px-3 py-2">
+                  <td className="sticky left-0 z-10 bg-inherit px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <ColorSwatch
                         hexCode={cg.hexCode}
@@ -341,26 +249,40 @@ function ColorSizeMatrix({
                         isActive={isActive}
                         size="sm"
                       />
-                      <span className="text-gray-900 whitespace-nowrap">
-                        {cg.colorRaw || cg.colorName}
+                      <span className={`whitespace-nowrap ${isActive ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                        {colorName}
                       </span>
                     </div>
                   </td>
                   {allSizes.map((size) => {
-                    const priceCents = sizeMap.get(size);
-                    const available = priceCents !== undefined;
+                    const variant = variantMap.get(size);
+                    const available = variant !== undefined;
+                    const isCellActive =
+                      activeCell?.colorIdx === idx && activeCell?.size === size;
+
                     return (
                       <td
                         key={size}
-                        className={`px-2 py-2 text-center whitespace-nowrap ${
+                        className={`px-2 py-2.5 text-center whitespace-nowrap ${
                           available ? 'text-gray-900' : 'text-gray-300'
                         }`}
                       >
-                        {available
-                          ? showPrices && priceCents > 0
-                            ? `\u20AC ${(priceCents / 100).toFixed(2).replace('.', ',')}`
-                            : '\u2713'
-                          : '\u2014'}
+                        {available ? (
+                          <button
+                            type="button"
+                            onClick={(e) => handleCellClick(e, idx, size, variant, colorName)}
+                            className={`inline-flex items-center justify-center w-7 h-7 rounded transition-colors ${
+                              isCellActive
+                                ? 'bg-gray-900 text-white'
+                                : 'hover:bg-gray-200 text-gray-900'
+                            }`}
+                            title={`${colorName} ${size} — klik voor EAN`}
+                          >
+                            ✓
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center justify-center w-7 h-7">—</span>
+                        )}
                       </td>
                     );
                   })}
@@ -370,6 +292,18 @@ function ColorSizeMatrix({
           </tbody>
         </table>
       </div>
+
+      {activeCell && (
+        <EanPopover
+          ean={activeCell.variant.ean}
+          colorName={activeCell.colorName}
+          size={activeCell.size}
+          priceCents={activeCell.variant.priceCents}
+          showPrices={showPrices}
+          anchorRect={activeCell.anchorRect}
+          onClose={() => setActiveCell(null)}
+        />
+      )}
     </div>
   );
 }
@@ -383,15 +317,13 @@ function ColorSwatch({
   secondaryHex,
   isActive,
   size = 'md',
-  onClick,
 }: {
   hexCode: string;
   secondaryHex?: string | null;
   isActive: boolean;
   size?: 'sm' | 'md';
-  onClick?: () => void;
 }) {
-  const sizeClass = size === 'sm' ? 'h-4 w-4' : 'h-6 w-6';
+  const sizeClass = size === 'sm' ? 'h-3.5 w-3.5' : 'h-6 w-6';
   const hex = hexCode || '#cccccc';
 
   const style: React.CSSProperties = secondaryHex
@@ -400,67 +332,13 @@ function ColorSwatch({
 
   return (
     <span
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
       className={`inline-block shrink-0 rounded-full border-2 ${sizeClass} ${
         isActive
           ? 'border-gray-900 ring-2 ring-gray-900 ring-offset-1'
           : 'border-gray-300'
-      } ${onClick ? 'cursor-pointer hover:border-gray-500' : ''}`}
+      }`}
       style={style}
     />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Product Attributes
-// ---------------------------------------------------------------------------
-
-function ProductAttributes({ model }: { model: ShowcaseModel }) {
-  return (
-    <div>
-      <h3 className="mb-3 text-sm font-medium text-gray-900">
-        Productinformatie
-      </h3>
-      {model.descriptionNl ? (
-        <p className="text-sm leading-relaxed text-gray-600 whitespace-pre-line">
-          {model.descriptionNl}
-        </p>
-      ) : model.shortDescriptionNl ? (
-        <p className="text-sm leading-relaxed text-gray-600">
-          {model.shortDescriptionNl}
-        </p>
-      ) : (
-        <p className="text-sm text-gray-400">
-          Geen productomschrijving beschikbaar.
-        </p>
-      )}
-
-      <dl className="mt-4 space-y-2 text-sm">
-        <div className="flex justify-between">
-          <dt className="text-gray-500">Merk</dt>
-          <dd className="font-medium text-gray-900">{model.brandName}</dd>
-        </div>
-        {model.modelCode && (
-          <div className="flex justify-between">
-            <dt className="text-gray-500">Artikelnummer</dt>
-            <dd className="font-medium text-gray-900">{model.modelCode}</dd>
-          </div>
-        )}
-        <div className="flex justify-between">
-          <dt className="text-gray-500">Kleuren</dt>
-          <dd className="font-medium text-gray-900">
-            {model.colorGroups.length}
-          </dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-gray-500">Varianten</dt>
-          <dd className="font-medium text-gray-900">{model.variantCount}</dd>
-        </div>
-      </dl>
-    </div>
   );
 }
 
@@ -475,7 +353,6 @@ export default function ProductClient() {
 
   const { getBySlug, isLoading } = useModelCards();
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
-  const [hoveredColorIndex, setHoveredColorIndex] = useState<number | null>(null);
   const [headerSearch, setHeaderSearch] = useState('');
 
   const handleBack = useCallback(() => {
@@ -488,23 +365,25 @@ export default function ProductClient() {
 
   const pendingRequests = usePendingRequests();
   const changeRequest = useChangeRequest(pendingRequests);
-  const { tree: categoryTree } = useCategoryTree();
+  const { tree: categoryTree, getCategoryPath } = useCategoryTree();
   const { isUnlocked } = useShowcaseAuth();
   const enrichment = useEnrichment();
-  const [showEnrichmentPanel, setShowEnrichmentPanel] = useState(false);
 
   const model = getBySlug(slug);
 
+  // Build clickable breadcrumb nodes from category tree
+  const categoryNodes = useMemo(() => {
+    if (!model?.categoryCode) return [];
+    return getCategoryPath(model.categoryCode);
+  }, [model?.categoryCode, getCategoryPath]);
+
   // Read initial color from URL query param (?color=RAW)
-  // Priority: match colorRaw first (unique per model), then fallback to colorCode
   useEffect(() => {
     if (!model) return;
     const searchParams = new URLSearchParams(window.location.search);
     const colorParam = searchParams.get('color');
     if (colorParam) {
-      // Try exact colorRaw match first (unique, preferred)
       let idx = model.colorGroups.findIndex((cg) => cg.colorRaw === colorParam);
-      // Fallback to colorCode match (may not be unique, legacy support)
       if (idx < 0) {
         idx = model.colorGroups.findIndex((cg) => cg.colorCode === colorParam);
       }
@@ -519,13 +398,6 @@ export default function ProductClient() {
     }
   }, [model?.id, isUnlocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-show panel when enrichment completes
-  useEffect(() => {
-    if (enrichment.status === 'completed' && enrichment.proposals.length > 0) {
-      setShowEnrichmentPanel(true);
-    }
-  }, [enrichment.status, enrichment.proposals.length]);
-
   const handleSearchChange = useCallback((value: string) => {
     setHeaderSearch(value);
     if (value.trim()) {
@@ -537,22 +409,23 @@ export default function ProductClient() {
     window.location.href = `/category/${code}/`;
   }, []);
 
-  // Show hovered color group images when hovering, otherwise selected
-  const displayColorIndex = hoveredColorIndex ?? selectedColorIndex;
-
+  // Gallery shows selected color group images
   const currentImages = useMemo(() => {
     if (!model) return [];
-    const cg = model.colorGroups[displayColorIndex];
+    const cg = model.colorGroups[selectedColorIndex];
     return cg?.images ?? [];
-  }, [model, displayColorIndex]);
+  }, [model, selectedColorIndex]);
 
   const handleColorSelect = useCallback((index: number) => {
     setSelectedColorIndex(index);
-  }, []);
-
-  const handleColorHover = useCallback((index: number | null) => {
-    setHoveredColorIndex(index);
-  }, []);
+    // Sync selected color to URL for back/forward support
+    const cg = model?.colorGroups[index];
+    if (cg) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('color', cg.colorRaw);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, [model]);
 
   if (isLoading) {
     return (
@@ -561,7 +434,7 @@ export default function ProductClient() {
         <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
           <div className="animate-pulse">
             <div className="h-6 w-32 rounded bg-gray-100" />
-            <div className="mt-8 grid gap-8 lg:grid-cols-2">
+            <div className="mt-8 grid gap-8 lg:grid-cols-[35%_1fr]">
               <div className="aspect-square rounded-lg bg-gray-100" />
               <div className="space-y-4">
                 <div className="h-4 w-24 rounded bg-gray-100" />
@@ -592,12 +465,10 @@ export default function ProductClient() {
     );
   }
 
-  const selectedColorGroup = model.colorGroups[selectedColorIndex] ?? model.colorGroups[0];
   const modelId = String(model.id);
   const pendingReq = pendingRequests.getPending(modelId);
   const isBusy =
     changeRequest.status === 'submitting' ||
-    changeRequest.status === 'authenticating' ||
     changeRequest.status === 'withdrawing';
 
   return (
@@ -613,81 +484,53 @@ export default function ProductClient() {
           Terug naar catalogus
         </button>
 
-        {/* Product layout */}
-        <div className="mt-6 grid gap-8 lg:grid-cols-2">
-          {/* Left: Gallery */}
-          <ProductGallery
-            images={currentImages}
-            modelName={model.modelName || model.modelCode || ''}
-          />
+        {/* Product layout: 35% image+specs / 65% details+matrix */}
+        <div className="mt-6 grid gap-8 lg:grid-cols-[35%_1fr]">
+          {/* Left: Gallery + Specs (desktop) */}
+          <div className="space-y-4">
+            <ProductGallery
+              images={currentImages}
+              modelName={model.modelName || model.modelCode || ''}
+            />
+            {/* Specs: desktop under image, mobile at bottom */}
+            <div className="hidden lg:block">
+              <ProductSpecs model={model} />
+            </div>
+          </div>
 
-          {/* Right: Details */}
-          <div className="space-y-6">
+          {/* Right: Header + Description + Matrix */}
+          <div className="space-y-5">
             <ProductHeader
               model={model}
               showBadge={isUnlocked}
+              showPrices={isUnlocked}
+              categoryNodes={categoryNodes}
               actionSlot={isUnlocked ? (
-                <div className="flex items-center gap-2">
-                  {pendingReq && <PendingIndicator request={pendingReq} />}
-                  <ChangeRequestButton
-                    pendingRequest={pendingReq}
-                    isLoading={isBusy}
-                    onRequestChange={() => changeRequest.startChangeRequest(modelId)}
-                    onWithdraw={() => changeRequest.startWithdraw(modelId)}
-                  />
-                  <EnrichButton
-                    status={enrichment.status}
-                    hasProposals={enrichment.proposals.length > 0}
-                    onTrigger={() => enrichment.trigger(modelId)}
-                    onViewProposals={() => setShowEnrichmentPanel(true)}
-                  />
-                </div>
+                <ActionMenu
+                  pendingRequest={pendingReq}
+                  isLoading={isBusy}
+                  enrichmentProposalCount={enrichment.proposals.length}
+                  onSelectAction={(tab) => changeRequest.startChangeRequest(modelId, tab)}
+                  onWithdraw={() => changeRequest.startWithdraw(modelId)}
+                />
               ) : undefined}
             />
 
-            <ColorSelector
-              colorGroups={model.colorGroups}
-              selectedIndex={selectedColorIndex}
-              onSelect={handleColorSelect}
-              onHover={handleColorHover}
-              hoveredIndex={hoveredColorIndex}
+            <ExpandableDescription
+              text={model.descriptionNl || model.shortDescriptionNl || null}
             />
 
-            {selectedColorGroup && (
-              <VariantInfoTable
-                colorGroup={selectedColorGroup}
-                showPrices={isUnlocked}
-              />
-            )}
+            <ColorSizeMatrix
+              colorGroups={model.colorGroups}
+              selectedColorIndex={selectedColorIndex}
+              onSelectColor={handleColorSelect}
+              showPrices={isUnlocked}
+            />
+          </div>
 
-            {model.colorGroups.length > 1 && (
-              <>
-                <hr className="border-gray-200" />
-                <ColorSizeMatrix
-                  colorGroups={model.colorGroups}
-                  selectedColorIndex={selectedColorIndex}
-                  onSelectColor={handleColorSelect}
-                  showPrices={isUnlocked}
-                />
-              </>
-            )}
-
-            <hr className="border-gray-200" />
-
-            <ProductAttributes model={model} />
-
-            {/* Enrichment panel */}
-            {isUnlocked && showEnrichmentPanel && enrichment.proposals.length > 0 && (
-              <EnrichmentPanel
-                proposals={enrichment.proposals}
-                isReviewing={enrichment.status === 'reviewing'}
-                onAcceptField={enrichment.acceptField}
-                onRejectField={enrichment.rejectField}
-                onAcceptImage={enrichment.acceptImage}
-                onRejectImage={enrichment.rejectImage}
-                onBulkAccept={enrichment.bulkAccept}
-              />
-            )}
+          {/* Mobile-only: Specs at bottom */}
+          <div className="lg:hidden">
+            <ProductSpecs model={model} />
           </div>
         </div>
       </div>
@@ -699,6 +542,17 @@ export default function ProductClient() {
         model={model}
         categoryTree={categoryTree}
         selectedColorGroupIndex={selectedColorIndex}
+        initialTab={changeRequest.initialTab ?? undefined}
+        enrichment={{
+          status: enrichment.status,
+          proposals: enrichment.proposals,
+          onTrigger: () => enrichment.trigger(modelId),
+          onAcceptField: enrichment.acceptField,
+          onRejectField: enrichment.rejectField,
+          onAcceptImage: enrichment.acceptImage,
+          onRejectImage: enrichment.rejectImage,
+          onBulkAccept: enrichment.bulkAccept,
+        }}
         onSubmit={changeRequest.submitChangeRequest}
         onClose={changeRequest.cancel}
       />
@@ -709,31 +563,6 @@ export default function ProductClient() {
         isLoading={changeRequest.status === 'withdrawing'}
         onConfirm={changeRequest.confirmWithdraw}
         onClose={changeRequest.cancel}
-      />
-
-      {/* PIN Modal (shared by create + withdraw + enrichment flows) */}
-      <PinModal
-        isOpen={
-          changeRequest.status === 'needs_pin' ||
-          changeRequest.status === 'authenticating' ||
-          enrichment.status === 'needs_pin'
-        }
-        isLoading={changeRequest.status === 'authenticating'}
-        errorMessage={changeRequest.errorMessage || enrichment.errorMessage}
-        onSubmit={(pin) => {
-          if (enrichment.status === 'needs_pin') {
-            enrichment.submitPin(pin);
-          } else {
-            changeRequest.submitPin(pin);
-          }
-        }}
-        onClose={() => {
-          if (enrichment.status === 'needs_pin') {
-            enrichment.cancel();
-          } else {
-            changeRequest.cancel();
-          }
-        }}
       />
 
       <ToastContainer toasts={changeRequest.toasts} onDismiss={changeRequest.dismissToast} />

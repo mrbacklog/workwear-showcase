@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ShowcaseModel } from '@/types/product';
+import type { ShowcaseModel, CategoryNode } from '@/types/product';
 import { formatPriceRange } from '@/lib/format';
 import { useMemo } from 'react';
 
@@ -7,9 +7,12 @@ interface ProductHeaderProps {
   model: ShowcaseModel;
   actionSlot?: React.ReactNode;
   showBadge?: boolean;
+  showPrices?: boolean;
+  /** Category nodes for clickable breadcrumbs (from useCategoryTree().getCategoryPath) */
+  categoryNodes?: CategoryNode[];
 }
 
-export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHeaderProps) {
+export function ProductHeader({ model, actionSlot, showBadge = true, showPrices = true, categoryNodes }: ProductHeaderProps) {
   // Compute price range
   const { minPrice, maxPrice } = useMemo(() => {
     let min = Infinity;
@@ -37,8 +40,30 @@ export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHe
 
   return (
     <div>
-      {/* Category breadcrumb */}
-      {categorySegments.length > 0 && (
+      {/* Category breadcrumb — clickable when categoryNodes provided */}
+      {(categoryNodes && categoryNodes.length > 0 ? categoryNodes : null) ? (
+        <nav className="mb-3 flex items-center gap-1 text-xs text-gray-400" aria-label="Breadcrumb">
+          {categoryNodes!.map((node, index) => (
+            <span key={node.code} className="flex items-center gap-1">
+              {index > 0 && (
+                <svg
+                  className="h-3 w-3 text-gray-300 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+              <Link href={`/category/${node.code}/`} className="truncate hover:text-gray-600">
+                {node.nameNl}
+              </Link>
+            </span>
+          ))}
+        </nav>
+      ) : categorySegments.length > 0 ? (
         <nav className="mb-3 flex items-center gap-1 text-xs text-gray-400" aria-label="Breadcrumb">
           {categorySegments.map((segment, index) => (
             <span key={index} className="flex items-center gap-1">
@@ -58,7 +83,7 @@ export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHe
             </span>
           ))}
         </nav>
-      )}
+      ) : null}
 
       {/* Brand */}
       <Link
@@ -70,7 +95,7 @@ export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHe
 
       {/* Model name + status badge */}
       <div className="mt-1 flex items-start gap-3">
-        <h1 className="text-2xl font-bold leading-tight text-gray-900">{model.modelName}</h1>
+        <h1 className="text-2xl font-bold leading-tight text-gray-900">{model.modelName || model.modelCode}</h1>
         {showBadge && (
           <span
             className={`mt-1 inline-flex shrink-0 items-center rounded px-2 py-0.5 text-xs font-medium ${statusClasses}`}
@@ -80,10 +105,12 @@ export function ProductHeader({ model, actionSlot, showBadge = true }: ProductHe
         )}
       </div>
 
-      {/* Price range */}
-      <p className="mt-2 text-lg font-semibold text-gray-900">
-        {formatPriceRange(minPrice, maxPrice)}
-      </p>
+      {/* Price range (only when unlocked) */}
+      {showPrices && (
+        <p className="mt-2 text-lg font-semibold text-gray-900">
+          {formatPriceRange(minPrice, maxPrice)}
+        </p>
+      )}
 
       {/* Action slot (nomination button) */}
       {actionSlot && <div className="mt-4">{actionSlot}</div>}
