@@ -71,6 +71,18 @@ export interface ColorGroup {
   secondaryHex: string | null;
   /** Secondary color name, null if single color */
   secondaryName: string | null;
+  /** Secondary color family code for filter matching */
+  secondaryCode: string | null;
+  /** Tertiary hex color for three-tone display */
+  tertiaryHex: string | null;
+  /** Tertiary color name */
+  tertiaryName: string | null;
+  /** Tertiary color family code for filter matching */
+  tertiaryCode: string | null;
+  /** Whether any variant in this group is fluorescent */
+  isFluorescent: boolean;
+  /** Whether any variant in this group is high-visibility */
+  isHighVisibility: boolean;
   /** Variants within this color group, sorted by size */
   variants: ShowcaseVariant[];
   /** Images for this color group */

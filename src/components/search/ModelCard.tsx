@@ -6,6 +6,7 @@ import type { ShowcaseModel } from '@/types/product';
 import { formatPrice, formatPriceRange } from '@/lib/format';
 import { VariantThumbnailStrip } from '@/components/search/VariantThumbnailStrip';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { getColorCodes } from '@/lib/color-filter-utils';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
 
 interface ModelCardProps {
@@ -19,7 +20,9 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
 
   const initialGroupIndex = useMemo(() => {
     if (preferredColorCodes && preferredColorCodes.size > 0) {
-      const idx = model.colorGroups.findIndex((cg) => preferredColorCodes.has(cg.colorCode));
+      const idx = model.colorGroups.findIndex((cg) =>
+        getColorCodes(cg).some((code) => preferredColorCodes.has(code))
+      );
       if (idx >= 0) return idx;
     }
     return 0;

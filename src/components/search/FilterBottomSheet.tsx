@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { ColorFilter } from '@/components/search/ColorFilter';
 import { BrandFilter } from '@/components/search/BrandFilter';
+import { SpecialColorFilter } from '@/components/search/SpecialColorFilter';
 import type { ColorInfo } from '@/components/search/ColorFilter';
 import type { BrandInfo } from '@/hooks/useModelCards';
 
@@ -17,6 +18,13 @@ interface FilterBottomSheetProps {
   colors: ColorInfo[];
   selectedColors: Set<string>;
   onColorToggle: (code: string) => void;
+  // Special colors
+  hiVisActive: boolean;
+  fluorescentActive: boolean;
+  hiVisCount: number;
+  fluorescentCount: number;
+  onToggleHiVis: () => void;
+  onToggleFluorescent: () => void;
   // Active count for display
   activeFilterCount: number;
 }
@@ -30,6 +38,12 @@ export function FilterBottomSheet({
   colors,
   selectedColors,
   onColorToggle,
+  hiVisActive,
+  fluorescentActive,
+  hiVisCount,
+  fluorescentCount,
+  onToggleHiVis,
+  onToggleFluorescent,
   activeFilterCount,
 }: FilterBottomSheetProps) {
   // Close on Escape key
@@ -106,6 +120,16 @@ export function FilterBottomSheet({
             colors={colors}
             selectedCodes={selectedColors}
             onToggle={onColorToggle}
+          />
+
+          {/* Special colors */}
+          <SpecialColorFilter
+            hiVisCount={hiVisCount}
+            fluorescentCount={fluorescentCount}
+            hiVisActive={hiVisActive}
+            fluorescentActive={fluorescentActive}
+            onToggleHiVis={onToggleHiVis}
+            onToggleFluorescent={onToggleFluorescent}
           />
 
           <hr className="border-gray-200" />
