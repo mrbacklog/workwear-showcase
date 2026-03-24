@@ -76,6 +76,12 @@ interface ShowcaseColorGroup {
   hexCode: string | null;
   secondaryHex: string | null;
   secondaryName: string | null;
+  secondaryCode: string | null;
+  tertiaryHex: string | null;
+  tertiaryName: string | null;
+  tertiaryCode: string | null;
+  isFluorescent: boolean;
+  isHighVisibility: boolean;
   variants: ShowcaseVariant[];
   images: ShowcaseImage[];
 }
@@ -133,6 +139,12 @@ interface FrontendColorGroup {
   hexCode: string;
   secondaryHex: string | null;
   secondaryName: string | null;
+  secondaryCode: string | null;
+  tertiaryHex: string | null;
+  tertiaryName: string | null;
+  tertiaryCode: string | null;
+  isFluorescent: boolean;
+  isHighVisibility: boolean;
   variants: {
     ean: string;
     sizeRaw: string;
@@ -404,6 +416,12 @@ function transformModel(model: ShowcaseModel): FrontendModel {
     hexCode: cg.hexCode ?? '',
     secondaryHex: cg.secondaryHex,
     secondaryName: cg.secondaryName,
+    secondaryCode: cg.secondaryCode,
+    tertiaryHex: cg.tertiaryHex,
+    tertiaryName: cg.tertiaryName,
+    tertiaryCode: cg.tertiaryCode,
+    isFluorescent: cg.isFluorescent ?? false,
+    isHighVisibility: cg.isHighVisibility ?? false,
     variants: cg.variants.map((v) => ({
       ean: v.ean,
       sizeRaw: v.sizeRaw,
