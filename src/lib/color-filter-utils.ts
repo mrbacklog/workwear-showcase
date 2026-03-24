@@ -71,13 +71,31 @@ export function flattenColorGroups(groups: ColorFilterGroup[]): Set<string> {
 /**
  * Check if a model matches the color filter groups.
  * OR between groups, AND within each group.
- * Colors match across all positions (primary, secondary, tertiary).
+ *
+ * Single-color groups: match if ANY colorGroup contains that color
+ * (primary, secondary, or tertiary).
+ *
+ * AND groups (linked colors): match only if a SINGLE colorGroup
+ * contains ALL linked colors. E.g., linking black+red means we want
+ * variants that are literally black-red (both in one colorGroup),
+ * not a model that has a black variant AND a separate red variant.
  */
 export function modelMatchesColorFilter(
   model: ShowcaseModel,
   groups: ColorFilterGroup[],
 ): boolean {
   if (groups.length === 0) return true;
-  const modelCodes = getAllModelColorCodes(model);
-  return groups.some((group) => group.every((code) => modelCodes.has(code)));
+
+  return groups.some((group) => {
+    if (group.length === 1) {
+      // Single color: match across any colorGroup
+      const code = group[0];
+      return model.colorGroups.some((cg) => getColorCodes(cg).includes(code));
+    }
+    // AND group: a single colorGroup must contain ALL linked colors
+    return model.colorGroups.some((cg) => {
+      const cgCodes = getColorCodes(cg);
+      return group.every((code) => cgCodes.includes(code));
+    });
+  });
 }
