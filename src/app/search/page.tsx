@@ -716,6 +716,7 @@ function SearchPageContent() {
                 <VirtualGrid
                   items={specialFilteredModels}
                   preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                  colorFilterGroups={colorFilterGroups.length > 0 ? colorFilterGroups : undefined}
                   viewMode={viewMode}
                 />
               </>
