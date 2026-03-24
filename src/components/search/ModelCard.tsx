@@ -6,19 +6,35 @@ import type { ShowcaseModel } from '@/types/product';
 import { formatPrice, formatPriceRange } from '@/lib/format';
 import { VariantThumbnailStrip } from '@/components/search/VariantThumbnailStrip';
 import { ProductImage } from '@/components/ui/ProductImage';
-import { getColorCodes } from '@/lib/color-filter-utils';
+import { getColorCodes, type ColorFilterGroup } from '@/lib/color-filter-utils';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
 
 interface ModelCardProps {
   model: ShowcaseModel;
   preferredColorCodes?: Set<string>;
+  /** AND/OR filter groups — used to select the best matching colorGroup */
+  colorFilterGroups?: ColorFilterGroup[];
   viewMode?: ViewMode;
 }
 
-export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: ModelCardProps) {
+export function ModelCard({ model, preferredColorCodes, colorFilterGroups, viewMode = 'grid' }: ModelCardProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const initialGroupIndex = useMemo(() => {
+    // First try: find a colorGroup that fully matches an AND group
+    if (colorFilterGroups && colorFilterGroups.length > 0) {
+      for (const group of colorFilterGroups) {
+        if (group.length > 1) {
+          // AND group: find colorGroup containing ALL linked colors
+          const idx = model.colorGroups.findIndex((cg) => {
+            const cgCodes = getColorCodes(cg);
+            return group.every((code) => cgCodes.includes(code));
+          });
+          if (idx >= 0) return idx;
+        }
+      }
+    }
+    // Fallback: find first colorGroup matching any selected color
     if (preferredColorCodes && preferredColorCodes.size > 0) {
       const idx = model.colorGroups.findIndex((cg) =>
         getColorCodes(cg).some((code) => preferredColorCodes.has(code))
@@ -26,7 +42,7 @@ export function ModelCard({ model, preferredColorCodes, viewMode = 'grid' }: Mod
       if (idx >= 0) return idx;
     }
     return 0;
-  }, [model.colorGroups, preferredColorCodes]);
+  }, [model.colorGroups, preferredColorCodes, colorFilterGroups]);
 
   const { minPrice, maxPrice } = useMemo(() => {
     let min = Infinity;

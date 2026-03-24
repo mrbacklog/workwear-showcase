@@ -662,6 +662,7 @@ function SearchPageContent() {
                       return model ? [model] : [];
                     })}
                     preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                    colorFilterGroups={colorFilterGroups.length > 0 ? colorFilterGroups : undefined}
                     viewMode={viewMode}
                   />
                 </>
@@ -691,6 +692,7 @@ function SearchPageContent() {
                   <VirtualGrid
                     items={browseModels}
                     preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
+                    colorFilterGroups={colorFilterGroups.length > 0 ? colorFilterGroups : undefined}
                     viewMode={viewMode}
                   />
                 </>

@@ -44,10 +44,11 @@ function getEstimatedRowHeight(viewMode: ViewMode): number {
 interface VirtualGridProps {
   items: ShowcaseModel[];
   preferredColorCodes?: Set<string>;
+  colorFilterGroups?: string[][];
   viewMode?: ViewMode;
 }
 
-export function VirtualGrid({ items, preferredColorCodes, viewMode = 'grid' }: VirtualGridProps) {
+export function VirtualGrid({ items, preferredColorCodes, colorFilterGroups, viewMode = 'grid' }: VirtualGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [columnCount, setColumnCount] = useState(2);
 
@@ -120,6 +121,7 @@ export function VirtualGrid({ items, preferredColorCodes, viewMode = 'grid' }: V
                     key={model.slug}
                     model={model}
                     preferredColorCodes={preferredColorCodes}
+                    colorFilterGroups={colorFilterGroups}
                     viewMode={viewMode}
                   />
                 ))}
