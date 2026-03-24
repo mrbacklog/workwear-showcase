@@ -85,6 +85,10 @@ export default function CategoryClient() {
     }
   }, []);
 
+  const handleCategorySelect = useCallback((code: string) => {
+    window.location.href = `/category/${code}/`;
+  }, []);
+
   const category = findCategory(categoryCode);
   const breadcrumbPath = getCategoryPath(categoryCode);
 
@@ -141,6 +145,7 @@ export default function CategoryClient() {
         categoryTree={tree}
         categoryCounts={aggregatedCounts}
         activeCategory={categoryCode}
+        onCategorySelect={handleCategorySelect}
       />
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
