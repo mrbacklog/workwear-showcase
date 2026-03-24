@@ -372,10 +372,11 @@ export default function ProductClient() {
   const model = getBySlug(slug);
 
   // Build clickable breadcrumb nodes from category tree
+  // Depend on categoryTree to recompute when tree data loads asynchronously
   const categoryNodes = useMemo(() => {
-    if (!model?.categoryCode) return [];
+    if (!model?.categoryCode || categoryTree.length === 0) return [];
     return getCategoryPath(model.categoryCode);
-  }, [model?.categoryCode, getCategoryPath]);
+  }, [model?.categoryCode, getCategoryPath, categoryTree]);
 
   // Read initial color from URL query param (?color=RAW)
   useEffect(() => {
