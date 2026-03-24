@@ -75,8 +75,14 @@ export function ModelCard({ model, preferredColorCodes, colorFilterGroups, viewM
   const displayImage = displayGroup?.images[0] ?? null;
 
   const linkHref = useMemo(() => {
+    // When hovering a different color, link to that color
     if (hoveredIndex !== null && hoveredIndex !== initialGroupIndex) {
       const colorRaw = model.colorGroups[hoveredIndex]?.colorRaw;
+      if (colorRaw) return `/product/${model.slug}/?color=${encodeURIComponent(colorRaw)}`;
+    }
+    // When a color filter selected a non-default group, pass it through
+    if (initialGroupIndex > 0) {
+      const colorRaw = model.colorGroups[initialGroupIndex]?.colorRaw;
       if (colorRaw) return `/product/${model.slug}/?color=${encodeURIComponent(colorRaw)}`;
     }
     return `/product/${model.slug}/`;
