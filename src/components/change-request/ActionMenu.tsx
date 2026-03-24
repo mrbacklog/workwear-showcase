@@ -179,7 +179,7 @@ export function ActionMenu({
 
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-xl border border-gray-200 py-1 z-50"
+          className="absolute left-0 mt-2 w-64 rounded-xl bg-white shadow-xl border border-gray-200 py-1 z-50"
           role="menu"
           aria-orientation="vertical"
         >
