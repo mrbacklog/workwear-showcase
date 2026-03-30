@@ -9,10 +9,14 @@ interface ImageLightboxProps {
   alt: string;
   /** Close handler */
   onClose: () => void;
+  /** Fallback URL (e.g. 800px) if original fails to load */
+  fallbackSrc?: string;
 }
 
-export function ImageLightbox({ src, alt, onClose }: ImageLightboxProps) {
+export function ImageLightbox({ src, alt, onClose, fallbackSrc }: ImageLightboxProps) {
   const [loaded, setLoaded] = useState(false);
+  const [activeSrc, setActiveSrc] = useState(src);
+  const [didFallback, setDidFallback] = useState(false);
 
   // Close on Escape
   useEffect(() => {
@@ -65,9 +69,15 @@ export function ImageLightbox({ src, alt, onClose }: ImageLightboxProps) {
       {/* Image */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={activeSrc}
         alt={alt}
         onLoad={() => setLoaded(true)}
+        onError={() => {
+          if (!didFallback && fallbackSrc) {
+            setDidFallback(true);
+            setActiveSrc(fallbackSrc);
+          }
+        }}
         className={`max-h-[90vh] max-w-[90vw] object-contain transition-opacity duration-300 ${
           loaded ? 'opacity-100' : 'opacity-0'
         }`}

@@ -111,6 +111,7 @@ function ProductGallery({
           src={lightboxUrl}
           alt={modelName}
           onClose={() => setLightboxUrl(null)}
+          fallbackSrc={mainImage.thumb800Webp}
         />
       )}
     </div>
