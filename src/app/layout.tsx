@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   title: 'Workwear Showcase',
   description: 'Product catalogus voor werkkleding',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/vk-logo-icon.png',
+    apple: '/vk-logo-icon.png',
   },
 };
 
