@@ -4,6 +4,7 @@ import './globals.css';
 import { Footer } from '@/components/layout/Footer';
 import { ShowcaseAuthProvider } from '@/contexts/ShowcaseAuthContext';
 import { ShowcasePinModal } from '@/components/layout/ShowcasePinModal';
+import { FeedbackDrawerAuth } from '@/components/layout/FeedbackDrawerAuth';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -67,6 +68,7 @@ export default function RootLayout({
           <main className="flex-1 pt-20 lg:pt-[128px]">{children}</main>
           <Footer />
           <ShowcasePinModal />
+          <FeedbackDrawerAuth />
         </ShowcaseAuthProvider>
       </body>
     </html>
