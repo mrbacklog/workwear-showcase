@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { captureScreenWithout, uploadScreenshot } from '../../lib/captureScreen';
 
 type FeedbackType = 'bug' | 'improvement' | 'feature'
 type FeedbackPriority = 'critical' | 'high' | 'medium' | 'low'
@@ -35,6 +36,12 @@ export function FeedbackDrawer() {
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const [screenshotBlob, setScreenshotBlob] = useState<Blob | null>(null)
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
+  const [capturing, setCapturing] = useState(false)
+  const capturingRef = useRef(false)
+  const [captureError, setCaptureError] = useState<string | null>(null)
 
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
@@ -46,6 +53,25 @@ export function FeedbackDrawer() {
     setPriority('medium')
     setSubmitted(false)
     setSubmitError(null)
+    setScreenshotBlob(null)
+    setScreenshotPreview(null)
+    setCaptureError(null)
+  }, [])
+
+  const handleCapture = useCallback(async () => {
+    if (capturingRef.current) return
+    capturingRef.current = true
+    setCapturing(true)
+    setCaptureError(null)
+    const result = await captureScreenWithout(drawerRef.current)
+    capturingRef.current = false
+    setCapturing(false)
+    if (result) {
+      setScreenshotBlob(result.blob)
+      setScreenshotPreview(result.dataUrl)
+    } else {
+      setCaptureError('Schermafbeelding mislukt. Probeer opnieuw.')
+    }
   }, [])
 
   const handleClose = useCallback(() => {
@@ -84,6 +110,14 @@ export function FeedbackDrawer() {
         setSubmitError('Versturen mislukt. Probeer het opnieuw.')
         return
       }
+      const capturedBlob = screenshotBlob
+      setScreenshotBlob(null)
+      setScreenshotPreview(null)
+      setCaptureError(null)
+      if (capturedBlob) {
+        const created = await res.json() as { id: string }
+        void uploadScreenshot(created.id, capturedBlob, API_BASE)
+      }
       setSubmitted(true)
       timerRef.current = setTimeout(handleClose, 1800)
     } catch {
@@ -106,6 +140,7 @@ export function FeedbackDrawer() {
 
       {/* Drawer */}
       <div
+        ref={drawerRef}
         role="dialog"
         aria-label="Feedback geven"
         aria-modal="true"
@@ -199,6 +234,40 @@ export function FeedbackDrawer() {
 
         {!submitted && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+            {/* Screenshot sectie */}
+            <div style={{ marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                Schermafbeelding <span style={{ fontWeight: 400, textTransform: 'none' }}>(optioneel)</span>
+              </div>
+              {screenshotPreview ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '6px', background: '#f9fafb' }}>
+                  <img src={screenshotPreview} alt="preview" style={{ width: '64px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#374151' }}>screenshot.png</div>
+                    <button
+                      type="button"
+                      onClick={() => { setScreenshotBlob(null); setScreenshotPreview(null); setCaptureError(null) }}
+                      style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '2px' }}
+                      aria-label="Screenshot verwijderen"
+                    >
+                      Verwijderen
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCapture}
+                    disabled={capturing}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', fontWeight: 500, border: '2px dashed #d1d5db', borderRadius: '6px', background: 'transparent', color: '#6b7280', cursor: capturing ? 'not-allowed' : 'pointer', opacity: capturing ? 0.5 : 1 }}
+                  >
+                    <span aria-hidden="true">📷</span> {capturing ? 'Bezig...' : 'Scherm vastleggen'}
+                  </button>
+                  {captureError && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>{captureError}</p>}
+                </>
+              )}
+            </div>
             {submitError && (
               <p style={{ fontSize: 12, color: '#ef4444', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', margin: 0 }}>
                 {submitError}

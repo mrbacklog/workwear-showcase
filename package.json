@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.11.2",
+    "html-to-image": "^1.11.13",
     "minisearch": "^7.1.1",
     "next": "^15.3.0",
     "react": "^19.0.0",
