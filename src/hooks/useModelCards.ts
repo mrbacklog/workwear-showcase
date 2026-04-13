@@ -31,6 +31,7 @@ interface CategoryChunkEntry {
   file: string;
   modelCount: number;
   categoryName: string;
+  subChunks?: string[]; // present when category was split into multiple files
 }
 
 /** New meta format: chunks keyed by category key */
@@ -265,8 +266,17 @@ export function useModelCards(): UseModelCardsReturn {
  */
 function resolveChunkFiles(meta: ModelCardsMeta): string[] {
   if (isCategoryMeta(meta)) {
-    // New format: { chunks: { "cat-alg-kleding": { file: "model-cards-cat-alg-kleding.json", ... }, ... } }
-    return Object.values(meta.chunks).map((entry) => entry.file);
+    // New format: { chunks: { "cat-alg-kleding": { file, subChunks?, ... }, ... } }
+    // When a category was split into sub-chunks, use subChunks list; otherwise use file.
+    const files: string[] = [];
+    for (const entry of Object.values(meta.chunks)) {
+      if (entry.subChunks && entry.subChunks.length > 0) {
+        files.push(...entry.subChunks);
+      } else {
+        files.push(entry.file);
+      }
+    }
+    return files;
   }
 
   // Legacy format: { chunks: 3 } → model-cards-0.json, model-cards-1.json, ...

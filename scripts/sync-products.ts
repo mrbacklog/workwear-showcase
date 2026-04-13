@@ -640,7 +640,11 @@ interface CategoryChunkEntry {
   file: string;
   modelCount: number;
   categoryName: string;
+  subChunks?: string[]; // set when category exceeds MAX_CHUNK_BYTES and is split
 }
+
+// Cloudflare Pages hard limit is 25 MB; target well below to leave headroom.
+const MAX_CHUNK_BYTES = 20 * 1024 * 1024; // 20 MB
 
 async function writeDataFiles(
   models: FrontendModel[],
@@ -682,15 +686,9 @@ async function writeDataFiles(
   const chunksMeta: Record<string, CategoryChunkEntry> = {};
 
   for (const [chunkKey, chunkModels] of buckets.entries()) {
-    const fileName = `model-cards-${chunkKey}.json`;
-    const filePath = path.join(DATA_DIR, fileName);
-    await fs.writeFile(filePath, JSON.stringify(chunkModels), 'utf-8');
-    const sizeMB = (Buffer.byteLength(JSON.stringify(chunkModels), 'utf-8') / 1024 / 1024).toFixed(1);
-
     // Determine category name
     let categoryName = chunkKey;
     if (chunkKey !== 'cat-uncategorized') {
-      // Reverse lookup: find the L1 code from the chunk key
       for (const [l1Code, name] of l1NameMap.entries()) {
         if (l1CodeToChunkKey(l1Code) === chunkKey) {
           categoryName = name;
@@ -701,13 +699,62 @@ async function writeDataFiles(
       categoryName = 'Uncategorized';
     }
 
-    chunksMeta[chunkKey] = {
-      file: fileName,
-      modelCount: chunkModels.length,
-      categoryName,
-    };
+    const serialized = JSON.stringify(chunkModels);
+    const totalBytes = Buffer.byteLength(serialized, 'utf-8');
 
-    log(`Written ${fileName} (${chunkModels.length} models, ${sizeMB} MB, category: ${categoryName})`);
+    if (totalBytes <= MAX_CHUNK_BYTES) {
+      // Fits in a single file — write as before
+      const fileName = `model-cards-${chunkKey}.json`;
+      const filePath = path.join(DATA_DIR, fileName);
+      await fs.writeFile(filePath, serialized, 'utf-8');
+      const sizeMB = (totalBytes / 1024 / 1024).toFixed(1);
+      chunksMeta[chunkKey] = { file: fileName, modelCount: chunkModels.length, categoryName };
+      log(`Written ${fileName} (${chunkModels.length} models, ${sizeMB} MB, category: ${categoryName})`);
+    } else {
+      // Category too large — split into numbered sub-chunks of ≤ MAX_CHUNK_BYTES
+      const subChunkFiles: string[] = [];
+      let subIndex = 0;
+      let subModels: FrontendModel[] = [];
+      let subBytes = 2; // account for [] brackets
+
+      for (const model of chunkModels) {
+        const modelJson = JSON.stringify(model);
+        const modelBytes = Buffer.byteLength(modelJson, 'utf-8') + (subModels.length > 0 ? 1 : 0); // +1 for comma
+        if (subModels.length > 0 && subBytes + modelBytes > MAX_CHUNK_BYTES) {
+          // Flush current sub-chunk
+          const subKey = `${chunkKey}-${subIndex}`;
+          const subFile = `model-cards-${subKey}.json`;
+          await fs.writeFile(path.join(DATA_DIR, subFile), JSON.stringify(subModels), 'utf-8');
+          const sizeMB = (Buffer.byteLength(JSON.stringify(subModels), 'utf-8') / 1024 / 1024).toFixed(1);
+          log(`Written ${subFile} (${subModels.length} models, ${sizeMB} MB, sub-chunk ${subIndex} of ${categoryName})`);
+          subChunkFiles.push(subFile);
+          subIndex++;
+          subModels = [model];
+          subBytes = 2 + Buffer.byteLength(modelJson, 'utf-8');
+        } else {
+          subModels.push(model);
+          subBytes += modelBytes;
+        }
+      }
+      // Flush last sub-chunk
+      if (subModels.length > 0) {
+        const subKey = `${chunkKey}-${subIndex}`;
+        const subFile = `model-cards-${subKey}.json`;
+        await fs.writeFile(path.join(DATA_DIR, subFile), JSON.stringify(subModels), 'utf-8');
+        const sizeMB = (Buffer.byteLength(JSON.stringify(subModels), 'utf-8') / 1024 / 1024).toFixed(1);
+        log(`Written ${subFile} (${subModels.length} models, ${sizeMB} MB, sub-chunk ${subIndex} of ${categoryName})`);
+        subChunkFiles.push(subFile);
+      }
+
+      // Store meta with first sub-chunk file as canonical + subChunks list
+      chunksMeta[chunkKey] = {
+        file: subChunkFiles[0],
+        modelCount: chunkModels.length,
+        categoryName,
+        subChunks: subChunkFiles,
+      };
+      log(`Category ${categoryName} split into ${subChunkFiles.length} sub-chunks (${(totalBytes / 1024 / 1024).toFixed(1)} MB total)`);
+    }
   }
 
   // Write new-format meta
