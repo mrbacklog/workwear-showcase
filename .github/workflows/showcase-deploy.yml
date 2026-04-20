@@ -58,19 +58,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Restore data cache
-        uses: actions/cache/restore@v4
-        with:
-          path: public/data
-          key: showcase-data-v4-${{ github.sha }}
-          restore-keys: showcase-data-v4-
-
       - name: Sync product data
         run: |
+          FORCE_REQ="${{ github.event.inputs.force || github.event.client_payload.force || 'false' }}"
           FORCE_FLAG=""
-          if [ "${{ github.event.inputs.force || 'false' }}" = "true" ]; then
+          if [ "$FORCE_REQ" = "true" ]; then
             FORCE_FLAG="--force"
           fi
+          echo "Force requested: $FORCE_REQ (flag: '$FORCE_FLAG')"
           npx tsx scripts/sync-products.ts $FORCE_FLAG
         env:
           BACKEND_URL: https://api.databiz.app
@@ -89,13 +84,6 @@ jobs:
             echo "has_data=false" >> $GITHUB_OUTPUT
             echo "No data synced"
           fi
-
-      - name: Save data cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: public/data
-          key: showcase-data-v4-${{ github.sha }}
 
       - name: Upload data artifact
         if: steps.check-data.outputs.has_data == 'true'
@@ -136,14 +124,6 @@ jobs:
           name: showcase-data
           path: public/data/
         continue-on-error: true
-
-      - name: Restore data cache (fallback)
-        if: steps.download-artifact.outcome != 'success'
-        uses: actions/cache/restore@v4
-        with:
-          path: public/data
-          key: showcase-data-v4-${{ github.sha }}
-          restore-keys: showcase-data-v4-
 
       - name: Check if data exists
         id: check-data
