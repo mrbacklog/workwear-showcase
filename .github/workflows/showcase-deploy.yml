@@ -1,10 +1,6 @@
 name: Showcase Sync & Deploy
 
 on:
-  # Scheduled: every 4 hours
-  schedule:
-    - cron: '30 */4 * * *'
-
   # Manual trigger from GitHub UI
   workflow_dispatch:
     inputs:
