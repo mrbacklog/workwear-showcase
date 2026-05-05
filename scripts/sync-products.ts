@@ -786,7 +786,18 @@ async function writeDataFiles(
   // Remove stale category chunk files (chunks from previous runs not in current set)
   try {
     const existingFiles = await fs.readdir(DATA_DIR);
-    const currentChunkFiles = new Set(Object.values(chunksMeta).map((c) => c.file));
+    // Preserve both canonical files AND sub-chunk files; otherwise sub-chunks
+    // beyond the first get deleted right after being written, breaking lookup
+    // of any model that lives in a sub-chunk (issue: AWD JC001J / Kids' Cool T).
+    const currentChunkFiles = new Set<string>();
+    for (const meta of Object.values(chunksMeta)) {
+      currentChunkFiles.add(meta.file);
+      if (meta.subChunks) {
+        for (const sub of meta.subChunks) {
+          currentChunkFiles.add(sub);
+        }
+      }
+    }
     for (const file of existingFiles) {
       if (file.startsWith('model-cards-cat-') && file.endsWith('.json') && !currentChunkFiles.has(file)) {
         await fs.unlink(path.join(DATA_DIR, file));
