@@ -109,6 +109,8 @@ export function FeedbackDrawer() {
         role="dialog"
         aria-label="Feedback geven"
         aria-modal="true"
+        aria-hidden={!isOpen}
+        inert={!isOpen}
         style={{
           position: 'fixed',
           top: 0, bottom: 0, right: 0,
@@ -122,6 +124,8 @@ export function FeedbackDrawer() {
           transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 300ms ease-in-out',
           fontFamily: 'inherit',
+          visibility: isOpen ? 'visible' : 'hidden',
+          pointerEvents: isOpen ? 'auto' : 'none',
         }}
       >
         {/* Header */}
