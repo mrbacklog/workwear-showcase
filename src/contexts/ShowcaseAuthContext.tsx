@@ -5,6 +5,18 @@ import { authenticateWithPin } from '@/lib/change-request-api';
 
 const SESSION_KEY = 'showcase_session';
 
+// Safari ITP can aggressively purge localStorage; defer writes to idle time
+// to avoid blocking the main thread. Reads remain synchronous (needed for init).
+const idleWrite = (fn: () => void): void => {
+  if (typeof window === 'undefined') return;
+  if ('requestIdleCallback' in window) {
+    (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => void })
+      .requestIdleCallback(fn, { timeout: 1000 });
+  } else {
+    setTimeout(fn, 0);
+  }
+};
+
 interface Session {
   token: string;
   expiresAt: number;
@@ -59,7 +71,7 @@ export function ShowcaseAuthProvider({ children }: { children: React.ReactNode }
         token: result.token,
         expiresAt: Date.now() + result.expires_in * 1000,
       };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      idleWrite(() => localStorage.setItem(SESSION_KEY, JSON.stringify(session)));
       setIsUnlocked(true);
       setShowPinModal(false);
       return true;
@@ -72,7 +84,7 @@ export function ShowcaseAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const lock = useCallback(() => {
-    localStorage.removeItem(SESSION_KEY);
+    idleWrite(() => localStorage.removeItem(SESSION_KEY));
     setIsUnlocked(false);
   }, []);
 

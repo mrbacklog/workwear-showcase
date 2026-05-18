@@ -14,7 +14,8 @@
     "sync:deploy": "tsx scripts/sync-products.ts --build --deploy",
     "fixtures:load": "tsx scripts/load-fixtures.ts",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.11.2",
@@ -32,6 +33,7 @@
     "eslint-config-next": "^15.5.13",
     "postcss": "^8.5.0",
     "tailwindcss": "^4.1.0",
+    "@playwright/test": "^1.44.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
