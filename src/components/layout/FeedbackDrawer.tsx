@@ -221,32 +221,35 @@ export function FeedbackDrawer() {
         )}
       </div>
 
-      {/* Verticaal tabje */}
-      <button
-        onClick={() => setIsOpen(v => !v)}
-        aria-label="Feedback geven"
-        aria-expanded={isOpen}
-        style={{
-          position: 'fixed',
-          bottom: '10%',
-          right: isOpen ? 'min(340px, 90vw)' : 0,
-          zIndex: 51,
-          writingMode: 'vertical-rl',
-          transform: 'rotate(180deg)',
-          background: '#111827',
-          color: '#fff',
-          fontSize: 11, fontWeight: 700,
-          padding: '12px 7px',
-          borderRadius: '6px 0 0 6px',
-          border: 'none', cursor: 'pointer',
-          letterSpacing: '0.06em',
-          boxShadow: '-3px 0 12px rgba(0,0,0,0.15)',
-          transition: 'right 300ms ease-in-out',
-          userSelect: 'none',
-        }}
-      >
-        Feedback
-      </button>
+      {/* Verticaal tabje — alleen zichtbaar als drawer dicht is */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(v => !v)}
+          aria-label="Feedback geven"
+          aria-expanded={isOpen}
+          style={{
+            position: 'fixed',
+            bottom: '10%',
+            right: 0,
+            zIndex: 51,
+            writingMode: 'vertical-rl',
+            transform: 'rotate(180deg)',
+            background: '#111827',
+            color: '#fff',
+            fontSize: 11, fontWeight: 700,
+            padding: '16px 10px',
+            borderRadius: '6px 0 0 6px',
+            border: 'none', cursor: 'pointer',
+            letterSpacing: '0.06em',
+            boxShadow: '-3px 0 12px rgba(0,0,0,0.15)',
+            userSelect: 'none',
+            minWidth: 44,
+            minHeight: 44,
+          }}
+        >
+          Feedback
+        </button>
+      )}
     </>
   )
 }

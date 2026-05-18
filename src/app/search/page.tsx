@@ -444,31 +444,33 @@ function SearchPageContent() {
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex gap-8">
           {/* Sidebar — colors + special + brands, hidden on mobile */}
-          <aside className="hidden w-56 shrink-0 lg:block sticky top-36 self-start max-h-[calc(100vh-10rem)] overflow-y-auto">
-            <ColorFilter
-              colors={colorsForFilter}
-              selectedCodes={selectedColors}
-              onToggle={handleColorToggle}
-            />
+          <aside className="hidden w-56 shrink-0 lg:block sticky top-36 self-start">
+            <div className="max-h-[calc(100vh-10rem)] overflow-y-auto">
+              <ColorFilter
+                colors={colorsForFilter}
+                selectedCodes={selectedColors}
+                onToggle={handleColorToggle}
+              />
 
-            <hr className="my-4 border-gray-200" />
+              <hr className="my-4 border-gray-200" />
 
-            <SpecialColorFilter
-              hiVisCount={specialCounts.hiVisCount}
-              fluorescentCount={specialCounts.fluorescentCount}
-              hiVisActive={hiVisActive}
-              fluorescentActive={fluorescentActive}
-              onToggleHiVis={handleToggleHiVis}
-              onToggleFluorescent={handleToggleFluorescent}
-            />
+              <SpecialColorFilter
+                hiVisCount={specialCounts.hiVisCount}
+                fluorescentCount={specialCounts.fluorescentCount}
+                hiVisActive={hiVisActive}
+                fluorescentActive={fluorescentActive}
+                onToggleHiVis={handleToggleHiVis}
+                onToggleFluorescent={handleToggleFluorescent}
+              />
 
-            <hr className="my-4 border-gray-200" />
+              <hr className="my-4 border-gray-200" />
 
-            <BrandFilter
-              brands={brandsForFilter}
-              selectedSlugs={selectedBrands}
-              onToggle={handleBrandToggle}
-            />
+              <BrandFilter
+                brands={brandsForFilter}
+                selectedSlugs={selectedBrands}
+                onToggle={handleBrandToggle}
+              />
+            </div>
           </aside>
 
           {/* Main content */}
