@@ -7,7 +7,7 @@ import { VirtualGrid } from '@/components/search/VirtualGrid';
 import { ViewSwitcher } from '@/components/search/ViewSwitcher';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
 import { useSearch } from '@/hooks/useSearch';
-import { useModelCards } from '@/hooks/useModelCards';
+import { useModelSummaries } from '@/hooks/useModelSummaries';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { buildAggregatedCounts, getDescendantCodes } from '@/lib/category-utils';
 import { BrandFilter } from '@/components/search/BrandFilter';
@@ -60,7 +60,7 @@ function SearchPageContent() {
   const { query, setQuery, activate, results, isReady, isLoading: isSearching } = useSearch({
     initialQuery,
   });
-  const { models, isLoading: isModelsLoading, getBySlug, getBrands } = useModelCards();
+  const { summaries: models, isLoading: isModelsLoading, getBySlug, getBrands } = useModelSummaries();
   const { tree, isLoading: isCategoryLoading, findCategory } = useCategoryTree();
   const { isUnlocked } = useShowcaseAuth();
 

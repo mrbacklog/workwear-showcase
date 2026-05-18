@@ -211,6 +211,29 @@ interface SyncManifest {
   totalImages: number;
 }
 
+interface ModelSummary {
+  slug: string;
+  brandSlug: string;
+  brandName: string;
+  modelName: string;
+  modelCode: string;
+  categoryCode: string;
+  categoryPath: string;
+  publicationStatus: string;
+  thumbWebp: string;
+  minPrice: number;
+  colorGroups: Array<{
+    hexCode: string;
+    secondaryHex: string | null;
+    tertiaryHex: string | null;
+    colorCode: string;
+    secondaryCode: string | null;
+    tertiaryCode: string | null;
+    isFluorescent: boolean;
+    isHighVisibility: boolean;
+  }>;
+}
+
 // MiniSearch document
 interface SearchDocument {
   id: string;
@@ -684,6 +707,7 @@ async function writeDataFiles(
 
   // Write each category chunk and build meta
   const chunksMeta: Record<string, CategoryChunkEntry> = {};
+  const slugToChunkFile = new Map<string, string>();
 
   for (const [chunkKey, chunkModels] of buckets.entries()) {
     // Determine category name
@@ -709,6 +733,7 @@ async function writeDataFiles(
       await fs.writeFile(filePath, serialized, 'utf-8');
       const sizeMB = (totalBytes / 1024 / 1024).toFixed(1);
       chunksMeta[chunkKey] = { file: fileName, modelCount: chunkModels.length, categoryName };
+      for (const m of chunkModels) slugToChunkFile.set(m.slug, fileName);
       log(`Written ${fileName} (${chunkModels.length} models, ${sizeMB} MB, category: ${categoryName})`);
     } else {
       // Category too large — split into numbered sub-chunks of ≤ MAX_CHUNK_BYTES
@@ -727,6 +752,7 @@ async function writeDataFiles(
           await fs.writeFile(path.join(DATA_DIR, subFile), JSON.stringify(subModels), 'utf-8');
           const sizeMB = (Buffer.byteLength(JSON.stringify(subModels), 'utf-8') / 1024 / 1024).toFixed(1);
           log(`Written ${subFile} (${subModels.length} models, ${sizeMB} MB, sub-chunk ${subIndex} of ${categoryName})`);
+          for (const m of subModels) slugToChunkFile.set(m.slug, subFile);
           subChunkFiles.push(subFile);
           subIndex++;
           subModels = [model];
@@ -743,6 +769,7 @@ async function writeDataFiles(
         await fs.writeFile(path.join(DATA_DIR, subFile), JSON.stringify(subModels), 'utf-8');
         const sizeMB = (Buffer.byteLength(JSON.stringify(subModels), 'utf-8') / 1024 / 1024).toFixed(1);
         log(`Written ${subFile} (${subModels.length} models, ${sizeMB} MB, sub-chunk ${subIndex} of ${categoryName})`);
+        for (const m of subModels) slugToChunkFile.set(m.slug, subFile);
         subChunkFiles.push(subFile);
       }
 
@@ -765,6 +792,63 @@ async function writeDataFiles(
   const metaPath = path.join(DATA_DIR, 'model-cards-meta.json');
   await fs.writeFile(metaPath, JSON.stringify(meta), 'utf-8');
   log(`Written model-cards-meta.json (${buckets.size} category chunks, ${models.length} models)`);
+
+  // model-summary.json
+  const summaries: ModelSummary[] = models.map((m) => {
+    let thumbWebp = '';
+    outer: for (const cg of m.colorGroups) {
+      for (const img of cg.images) {
+        if (img.isCover) {
+          thumbWebp = img.thumb400Webp;
+          break outer;
+        }
+      }
+    }
+    if (!thumbWebp && m.colorGroups.length > 0 && m.colorGroups[0].images.length > 0) {
+      thumbWebp = m.colorGroups[0].images[0].thumb400Webp;
+    }
+
+    const prices: number[] = [];
+    for (const cg of m.colorGroups) {
+      for (const v of cg.variants) {
+        if (v.priceCents > 0) prices.push(v.priceCents);
+      }
+    }
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+
+    return {
+      slug: m.slug,
+      brandSlug: m.brandSlug,
+      brandName: m.brandName,
+      modelName: m.modelName,
+      modelCode: m.modelCode,
+      categoryCode: m.categoryCode,
+      categoryPath: m.categoryPath,
+      publicationStatus: m.publicationStatus,
+      thumbWebp,
+      minPrice,
+      colorGroups: m.colorGroups.map((cg) => ({
+        hexCode: cg.hexCode,
+        secondaryHex: cg.secondaryHex,
+        tertiaryHex: cg.tertiaryHex,
+        colorCode: cg.colorCode,
+        secondaryCode: cg.secondaryCode,
+        tertiaryCode: cg.tertiaryCode,
+        isFluorescent: cg.isFluorescent,
+        isHighVisibility: cg.isHighVisibility,
+      })),
+    };
+  });
+  const summaryJson = JSON.stringify(summaries);
+  await fs.writeFile(path.join(DATA_DIR, 'model-summary.json'), summaryJson, 'utf-8');
+  const summarySizeMB = (Buffer.byteLength(summaryJson, 'utf-8') / 1024 / 1024).toFixed(2);
+  log(`Written model-summary.json (${summaries.length} models, ${summarySizeMB} MB)`);
+
+  // slug-index.json
+  const slugIndex: Record<string, string> = Object.fromEntries(slugToChunkFile);
+  const slugIndexJson = JSON.stringify(slugIndex);
+  await fs.writeFile(path.join(DATA_DIR, 'slug-index.json'), slugIndexJson, 'utf-8');
+  log(`Written slug-index.json (${Object.keys(slugIndex).length} slugs)`);
 
   // Remove legacy numeric chunk files (model-cards-0.json, model-cards-1.json, ...)
   for (let i = 0; i < 20; i++) {

@@ -10,7 +10,7 @@ import { EanPopover } from '@/components/product/EanPopover';
 import { ActionMenu } from '@/components/change-request/ActionMenu';
 import { ChangeRequestModal, WithdrawDialog } from '@/components/change-request/ChangeRequestModal';
 import { ToastContainer } from '@/components/change-request/Toast';
-import { useModelCards } from '@/hooks/useModelCards';
+import { useModelDetail } from '@/hooks/useModelDetail';
 import { useChangeRequest } from '@/hooks/useChangeRequest';
 import { usePendingRequests } from '@/hooks/usePendingRequests';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
@@ -352,7 +352,7 @@ export default function ProductClient() {
   const slug = params.slug;
   const router = useRouter();
 
-  const { getBySlug, isLoading } = useModelCards();
+  const { model, isLoading, error } = useModelDetail(slug);
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [headerSearch, setHeaderSearch] = useState('');
 
@@ -369,8 +369,6 @@ export default function ProductClient() {
   const { tree: categoryTree, getCategoryPath } = useCategoryTree();
   const { isUnlocked } = useShowcaseAuth();
   const enrichment = useEnrichment();
-
-  const model = getBySlug(slug);
 
   // Build clickable breadcrumb nodes from category tree
   // Depend on categoryTree to recompute when tree data loads asynchronously
@@ -459,7 +457,7 @@ export default function ProductClient() {
             Product niet gevonden
           </h1>
           <p className="mt-2 text-gray-500">
-            Het product &ldquo;{slug}&rdquo; bestaat niet of is niet meer beschikbaar.
+            {error ?? `Het product "${slug}" bestaat niet of is niet meer beschikbaar.`}
           </p>
           <button onClick={handleBack} className="mt-6 inline-block rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800">Terug naar catalogus</button>
         </div>
