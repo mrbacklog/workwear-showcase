@@ -29,6 +29,28 @@ const idleRun = <T,>(fn: () => T): Promise<T> =>
       setTimeout(cb, 0);
     }
   });
+
+/**
+ * Wait until the page is fully loaded (window 'load' event) and then yield
+ * an extra moment so the browser can finish initial paint and any pending
+ * user-driven work before we start saturating the network with chunk fetches.
+ *
+ * Falls back to a fixed timeout if 'load' already fired or we're outside
+ * a browser context.
+ */
+const waitForPageSettle = (): Promise<void> =>
+  new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve();
+      return;
+    }
+    const settle = () => setTimeout(resolve, 1500);
+    if (document.readyState === 'complete') {
+      settle();
+    } else {
+      window.addEventListener('load', settle, { once: true });
+    }
+  });
 import type { ShowcaseModel } from '@/types/product';
 
 const MODEL_CARDS_META_PATH = '/data/model-cards-meta.json';
@@ -198,16 +220,23 @@ export function useModelCards(): UseModelCardsReturn {
           `[useModelCards] First chunk (${firstChunk.length} models) shown in ${elapsed0}ms`
         );
 
-        // Load remaining chunks SEQUENTIALLY (not via Promise.all). On mobile
-        // Safari, fetching + parsing multiple 20MB JSON files in parallel
-        // saturates the network and the JS parser, leaving the UI unresponsive
-        // for minutes. Sequential + idleRun yields the main thread between
-        // chunks so the page stays interactive.
-        for (const file of remainingFiles) {
-          if (cancelled) break;
-          const chunk = await fetchChunk(file);
-          if (cancelled) break;
-          await idleRun(() => startTransition(() => mergeChunk(chunk)));
+        // Load remaining chunks SEQUENTIALLY and ONLY after the page is fully
+        // loaded + has been interactive for a brief moment. Each chunk is a
+        // 2 MB Brotli download that decodes to ~20 MB JSON. On mobile Safari
+        // this saturates network and parser, so we wait for the browser to
+        // settle (window 'load' event, or 3 s timeout) before starting.
+        // Sequential + idleRun keeps the main thread responsive between chunks.
+        if (remainingFiles.length > 0) {
+          await waitForPageSettle();
+          for (const file of remainingFiles) {
+            if (cancelled) break;
+            const chunk = await fetchChunk(file);
+            if (cancelled) break;
+            await idleRun(() => startTransition(() => mergeChunk(chunk)));
+            // Brief yield between chunks so other tasks (user scroll, paint)
+            // can interleave on slower devices.
+            await new Promise((r) => setTimeout(r, 50));
+          }
         }
 
         const elapsed = (performance.now() - start).toFixed(1);

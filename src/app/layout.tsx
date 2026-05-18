@@ -26,7 +26,13 @@ export default function RootLayout({
     <html lang="nl">
       <head>
         <link rel="preconnect" href="https://api.databiz.app" />
-        <link rel="prefetch" href="/data/search-index.json" as="fetch" crossOrigin="anonymous" />
+        {/*
+         * Geen prefetch van search-index.json (1.2 MB Brotli) of model-cards
+         * chunks — die concurreren op mobiel met de eerste model-cards download
+         * en blokkeren parsing. Search-index laadt lazy bij eerste zoekactie
+         * (SearchManager.loadIndex). Alleen de kleine meta + category-tree
+         * preloaden.
+         */}
         <link rel="preload" href="/data/model-cards-meta.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/category-tree.json" as="fetch" crossOrigin="anonymous" />
 
