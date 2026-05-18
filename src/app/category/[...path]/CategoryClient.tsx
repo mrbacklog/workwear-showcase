@@ -75,7 +75,14 @@ export default function CategoryClient() {
 
   const handleViewChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
-    localStorage.setItem('showcase-view-mode', mode);
+    if (typeof window !== 'undefined') {
+      if ('requestIdleCallback' in window) {
+        (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => void })
+          .requestIdleCallback(() => localStorage.setItem('showcase-view-mode', mode), { timeout: 1000 });
+      } else {
+        setTimeout(() => localStorage.setItem('showcase-view-mode', mode), 0);
+      }
+    }
   }, []);
 
   const handleSearchChange = useCallback((value: string) => {

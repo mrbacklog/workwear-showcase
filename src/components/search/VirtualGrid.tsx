@@ -14,7 +14,7 @@ import type { ShowcaseModel } from '@/types/product';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
 
 const GAP_PX = 16;
-const OVERSCAN = 3;
+const OVERSCAN = 2;
 
 function getColumnCount(width: number, viewMode: ViewMode): number {
   if (viewMode === 'gallery') {

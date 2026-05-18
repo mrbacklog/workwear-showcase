@@ -18,6 +18,17 @@
  */
 
 import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
+
+const idleRun = <T,>(fn: () => T): Promise<T> =>
+  new Promise((resolve) => {
+    const cb = () => resolve(fn());
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => void })
+        .requestIdleCallback(cb, { timeout: 500 });
+    } else {
+      setTimeout(cb, 0);
+    }
+  });
 import type { ShowcaseModel } from '@/types/product';
 
 const MODEL_CARDS_META_PATH = '/data/model-cards-meta.json';
@@ -187,12 +198,15 @@ export function useModelCards(): UseModelCardsReturn {
           `[useModelCards] First chunk (${firstChunk.length} models) shown in ${elapsed0}ms`
         );
 
-        // Load remaining chunks and merge progressively using startTransition
-        // so these updates don't block urgent interactions (PIN entry, filters).
+        // Load remaining chunks and merge progressively. Use requestIdleCallback
+        // (via idleRun) to defer CPU-heavy mergeChunk work off the critical path,
+        // wrapped in startTransition so React can deprioritize these state updates.
         if (remainingFiles.length > 0) {
           const remainingPromises = remainingFiles.map((file) =>
             fetchChunk(file).then((chunk) => {
-              if (!cancelled) startTransition(() => mergeChunk(chunk));
+              if (!cancelled) {
+                return idleRun(() => startTransition(() => mergeChunk(chunk)));
+              }
             })
           );
           await Promise.all(remainingPromises);

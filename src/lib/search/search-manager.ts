@@ -80,15 +80,27 @@ export class SearchManager {
 
       const json = await response.text();
 
-      this.index = MiniSearch.loadJSON<SearchDocument>(json, {
-        fields: SEARCH_FIELDS as string[],
-        storeFields: STORE_FIELDS as string[],
+      // MiniSearch.loadJSON() is CPU-heavy and blocks the main thread on Safari.
+      // Defer it to an idle period so it doesn't jank navigation or paint.
+      await new Promise<void>((resolve) => {
+        const run = () => {
+          this.index = MiniSearch.loadJSON<SearchDocument>(json, {
+            fields: SEARCH_FIELDS as string[],
+            storeFields: STORE_FIELDS as string[],
+          });
+          this.ready = true;
+          resolve();
+        };
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => void })
+            .requestIdleCallback(run, { timeout: 2000 });
+        } else {
+          setTimeout(run, 0);
+        }
       });
 
-      this.ready = true;
-
       const elapsed = (performance.now() - start).toFixed(1);
-      console.debug(`[SearchManager] Index loaded in ${elapsed}ms (${this.index.documentCount} documents)`);
+      console.debug(`[SearchManager] Index loaded in ${elapsed}ms (${this.index?.documentCount} documents)`);
     } catch (error) {
       // Reset so a retry is possible
       this.loadPromise = null;
