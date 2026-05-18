@@ -6,8 +6,20 @@ import type { ColorGroup, ShowcaseModel } from '@/types/product';
  */
 export type ColorFilterGroup = string[];
 
+/** Minimal color group interface accepted by filter utilities. */
+export interface ColorGroupLike {
+  colorCode?: string;
+  secondaryCode?: string | null;
+  tertiaryCode?: string | null;
+}
+
+/** Minimal model interface accepted by filter utilities. */
+export interface ModelLike {
+  colorGroups: ColorGroupLike[];
+}
+
 /** Get all color codes from a color group (primary + secondary + tertiary). */
-export function getColorCodes(cg: ColorGroup): string[] {
+export function getColorCodes(cg: ColorGroup | ColorGroupLike): string[] {
   const codes: string[] = [];
   if (cg.colorCode) codes.push(cg.colorCode);
   if (cg.secondaryCode) codes.push(cg.secondaryCode);
@@ -79,9 +91,11 @@ export function flattenColorGroups(groups: ColorFilterGroup[]): Set<string> {
  * contains ALL linked colors. E.g., linking black+red means we want
  * variants that are literally black-red (both in one colorGroup),
  * not a model that has a black variant AND a separate red variant.
+ *
+ * Accepts both ShowcaseModel and ModelSummary (via ModelLike interface).
  */
 export function modelMatchesColorFilter(
-  model: ShowcaseModel,
+  model: ShowcaseModel | ModelLike,
   groups: ColorFilterGroup[],
 ): boolean {
   if (groups.length === 0) return true;

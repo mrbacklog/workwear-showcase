@@ -3,12 +3,12 @@
 import { useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { SearchResult } from '@/lib/search/types';
-import type { ShowcaseModel } from '@/types/product';
+import type { ModelSummary } from '@/types/summary';
 import { ModelCard } from '@/components/search/ModelCard';
 
 interface SearchResultsProps {
   results: SearchResult[];
-  modelCards: Map<string, ShowcaseModel>;
+  modelCards: Map<string, ModelSummary>;
 }
 
 /** Number of columns per breakpoint (matched via JS for virtualization). */

@@ -8,10 +8,11 @@ import { ModelCard } from '@/components/search/ModelCard';
 import { ViewSwitcher } from '@/components/search/ViewSwitcher';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
-import { useModelCards } from '@/hooks/useModelCards';
+import { useModelSummaries } from '@/hooks/useModelSummaries';
 import { buildAggregatedCounts, getDescendantCodes } from '@/lib/category-utils';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
-import type { CategoryNode, ShowcaseModel } from '@/types/product';
+import type { CategoryNode } from '@/types/product';
+import type { ModelSummary } from '@/types/summary';
 
 // ---------------------------------------------------------------------------
 // Breadcrumbs
@@ -65,7 +66,7 @@ export default function CategoryClient() {
   const categoryCode = pathSegments[pathSegments.length - 1] ?? '';
 
   const { tree, isLoading: isCategoryLoading, findCategory, getCategoryPath } = useCategoryTree();
-  const { getByCategory, models, isLoading: isModelsLoading } = useModelCards();
+  const { getByCategory, summaries: models, isLoading: isModelsLoading } = useModelSummaries();
   const { isUnlocked } = useShowcaseAuth();
   const [headerSearch, setHeaderSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -112,7 +113,7 @@ export default function CategoryClient() {
       codes.add(categoryCode);
     }
 
-    const result: ShowcaseModel[] = [];
+    const result: ModelSummary[] = [];
     for (const code of codes) {
       const matching = getByCategory(code);
       result.push(...matching);

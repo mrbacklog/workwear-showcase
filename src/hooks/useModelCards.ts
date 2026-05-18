@@ -117,6 +117,12 @@ export interface UseModelCardsReturn {
   loadChunk: (categoryKey: string) => Promise<void>;
 }
 
+/**
+ * @deprecated Use `useModelSummaries` for browse/search pages and `useModelDetail` for
+ * product detail pages. This hook loads all model-cards chunks (6+ MB) which is
+ * unnecessary for most use cases. See src/hooks/useModelSummaries.ts and
+ * src/hooks/useModelDetail.ts.
+ */
 export function useModelCards(): UseModelCardsReturn {
   const [models, setModels] = useState<ShowcaseModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);

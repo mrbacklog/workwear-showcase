@@ -10,7 +10,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ModelCard } from '@/components/search/ModelCard';
-import type { ShowcaseModel } from '@/types/product';
+import type { ModelSummary } from '@/types/summary';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
 
 const GAP_PX = 16;
@@ -42,7 +42,7 @@ function getEstimatedRowHeight(viewMode: ViewMode): number {
 }
 
 interface VirtualGridProps {
-  items: ShowcaseModel[];
+  items: ModelSummary[];
   preferredColorCodes?: Set<string>;
   colorFilterGroups?: string[][];
   viewMode?: ViewMode;
@@ -80,7 +80,7 @@ export function VirtualGrid({ items, preferredColorCodes, colorFilterGroups, vie
   });
 
   const getItemsForRow = useCallback(
-    (rowIndex: number): ShowcaseModel[] => {
+    (rowIndex: number): ModelSummary[] => {
       const start = rowIndex * columnCount;
       return items.slice(start, start + columnCount);
     },
