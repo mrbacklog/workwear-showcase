@@ -198,18 +198,16 @@ export function useModelCards(): UseModelCardsReturn {
           `[useModelCards] First chunk (${firstChunk.length} models) shown in ${elapsed0}ms`
         );
 
-        // Load remaining chunks and merge progressively. Use requestIdleCallback
-        // (via idleRun) to defer CPU-heavy mergeChunk work off the critical path,
-        // wrapped in startTransition so React can deprioritize these state updates.
-        if (remainingFiles.length > 0) {
-          const remainingPromises = remainingFiles.map((file) =>
-            fetchChunk(file).then((chunk) => {
-              if (!cancelled) {
-                return idleRun(() => startTransition(() => mergeChunk(chunk)));
-              }
-            })
-          );
-          await Promise.all(remainingPromises);
+        // Load remaining chunks SEQUENTIALLY (not via Promise.all). On mobile
+        // Safari, fetching + parsing multiple 20MB JSON files in parallel
+        // saturates the network and the JS parser, leaving the UI unresponsive
+        // for minutes. Sequential + idleRun yields the main thread between
+        // chunks so the page stays interactive.
+        for (const file of remainingFiles) {
+          if (cancelled) break;
+          const chunk = await fetchChunk(file);
+          if (cancelled) break;
+          await idleRun(() => startTransition(() => mergeChunk(chunk)));
         }
 
         const elapsed = (performance.now() - start).toFixed(1);

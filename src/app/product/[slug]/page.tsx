@@ -8,6 +8,7 @@ interface ModelCard {
 
 interface CategoryChunkEntry {
   file: string;
+  subChunks?: string[];
 }
 
 export function generateStaticParams() {
@@ -19,8 +20,17 @@ export function generateStaticParams() {
     // Resolve chunk filenames from either category-based or legacy format
     let chunkFiles: string[];
     if (typeof meta.chunks === 'object' && !Array.isArray(meta.chunks)) {
-      // Category format: { chunks: { "cat-key": { file: "model-cards-cat-key.json" } } }
-      chunkFiles = Object.values(meta.chunks as Record<string, CategoryChunkEntry>).map((e) => e.file);
+      // Category format: { chunks: { "cat-key": { file, subChunks? } } }
+      // When subChunks is present the category was split for size limits;
+      // use those instead of the (typically only first) main file.
+      chunkFiles = [];
+      for (const entry of Object.values(meta.chunks as Record<string, CategoryChunkEntry>)) {
+        if (entry.subChunks && entry.subChunks.length > 0) {
+          chunkFiles.push(...entry.subChunks);
+        } else {
+          chunkFiles.push(entry.file);
+        }
+      }
     } else {
       // Legacy format: { chunks: 3 } → model-cards-0.json, model-cards-1.json, ...
       chunkFiles = Array.from({ length: meta.chunks as number }, (_, i) => `model-cards-${i}.json`);
