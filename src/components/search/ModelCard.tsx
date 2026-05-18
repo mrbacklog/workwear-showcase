@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import Link from 'next/link';
 import type { ShowcaseModel } from '@/types/product';
 import { formatPrice, formatPriceRange } from '@/lib/format';
@@ -17,7 +17,7 @@ interface ModelCardProps {
   viewMode?: ViewMode;
 }
 
-export function ModelCard({ model, preferredColorCodes, colorFilterGroups, viewMode = 'grid' }: ModelCardProps) {
+function ModelCardInner({ model, preferredColorCodes, colorFilterGroups, viewMode = 'grid' }: ModelCardProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const initialGroupIndex = useMemo(() => {
@@ -232,3 +232,5 @@ export function ModelCard({ model, preferredColorCodes, colorFilterGroups, viewM
     </Link>
   );
 }
+
+export const ModelCard = memo(ModelCardInner);

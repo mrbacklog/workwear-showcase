@@ -24,14 +24,20 @@ export function MobileNav({ isOpen, onClose, tree, counts, onCategorySelect }: M
     return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
 
-  // Lock body scroll
+  // Lock body scroll — use fixed-position pattern for iOS Safari compatibility.
+  // The plain overflow:hidden approach does not prevent scroll on iOS Safari.
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
+    if (!isOpen) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
+    };
   }, [isOpen]);
 
   function toggleExpand(code: string) {
