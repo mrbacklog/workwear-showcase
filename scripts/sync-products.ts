@@ -226,6 +226,9 @@ interface ModelSummary {
     hexCode: string;
     secondaryHex: string | null;
     tertiaryHex: string | null;
+    colorCode: string;
+    secondaryCode: string | null;
+    tertiaryCode: string | null;
     isFluorescent: boolean;
     isHighVisibility: boolean;
   }>;
@@ -828,6 +831,9 @@ async function writeDataFiles(
         hexCode: cg.hexCode,
         secondaryHex: cg.secondaryHex,
         tertiaryHex: cg.tertiaryHex,
+        colorCode: cg.colorCode,
+        secondaryCode: cg.secondaryCode,
+        tertiaryCode: cg.tertiaryCode,
         isFluorescent: cg.isFluorescent,
         isHighVisibility: cg.isHighVisibility,
       })),
