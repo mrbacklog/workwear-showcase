@@ -794,6 +794,8 @@ async function writeDataFiles(
   log(`Written model-cards-meta.json (${buckets.size} category chunks, ${models.length} models)`);
 
   // model-summary.json
+  let cappedModelCount = 0;
+  let totalCappedColorGroups = 0;
   const summaries: ModelSummary[] = models.map((m) => {
     let thumbWebp = '';
     outer: for (const cg of m.colorGroups) {
@@ -816,6 +818,21 @@ async function writeDataFiles(
     }
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
 
+    // Build complete color code set from ALL colorGroups (for filter accuracy)
+    const allColorCodes = new Set<string>();
+    for (const cg of m.colorGroups) {
+      if (cg.colorCode) allColorCodes.add(cg.colorCode);
+      if (cg.secondaryCode) allColorCodes.add(cg.secondaryCode);
+      if (cg.tertiaryCode) allColorCodes.add(cg.tertiaryCode);
+    }
+
+    const totalColorGroups = m.colorGroups.length;
+    const COLOR_GROUPS_CAP = 12;
+    if (totalColorGroups > COLOR_GROUPS_CAP) {
+      cappedModelCount++;
+      totalCappedColorGroups += totalColorGroups;
+    }
+
     return {
       slug: m.slug,
       brandSlug: m.brandSlug,
@@ -827,7 +844,8 @@ async function writeDataFiles(
       publicationStatus: m.publicationStatus,
       thumbWebp,
       minPrice,
-      colorGroups: m.colorGroups.map((cg) => ({
+      // Cap at 12 for display (swatches on ModelCard) — saves ~70% of summary size on outliers
+      colorGroups: m.colorGroups.slice(0, COLOR_GROUPS_CAP).map((cg) => ({
         hexCode: cg.hexCode,
         secondaryHex: cg.secondaryHex,
         tertiaryHex: cg.tertiaryHex,
@@ -837,8 +855,15 @@ async function writeDataFiles(
         isFluorescent: cg.isFluorescent,
         isHighVisibility: cg.isHighVisibility,
       })),
+      // Complete set of color codes for accurate filter matching (uncapped)
+      colorCodeSet: allColorCodes.size > 0 ? Array.from(allColorCodes) : undefined,
     };
   });
+  if (cappedModelCount > 0) {
+    log(
+      `colorGroups capped: ${cappedModelCount} models had >${12} kleurgroepen (totaal ${totalCappedColorGroups} → max 12 per model in summary)`,
+    );
+  }
   const summaryJson = JSON.stringify(summaries);
   await fs.writeFile(path.join(DATA_DIR, 'model-summary.json'), summaryJson, 'utf-8');
   const summarySizeMB = (Buffer.byteLength(summaryJson, 'utf-8') / 1024 / 1024).toFixed(2);

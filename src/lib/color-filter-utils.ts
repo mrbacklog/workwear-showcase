@@ -16,6 +16,8 @@ export interface ColorGroupLike {
 /** Minimal model interface accepted by filter utilities. */
 export interface ModelLike {
   colorGroups: ColorGroupLike[];
+  /** Pre-computed set of all unique color codes (uncapped). Present in summary v2+. */
+  colorCodeSet?: string[];
 }
 
 /** Get all color codes from a color group (primary + secondary + tertiary). */
@@ -81,6 +83,31 @@ export function flattenColorGroups(groups: ColorFilterGroup[]): Set<string> {
 }
 
 /**
+ * Get all color codes for a model, using the pre-computed colorCodeSet when available.
+ *
+ * Defensive fallback: if colorCodeSet is absent (old summary build), iterates colorGroups.
+ * Note: colorCodeSet covers all color groups (uncapped), so filter accuracy is preserved
+ * even when colorGroups is capped at 12 in the summary.
+ *
+ * For AND-group matching (requires per-colorGroup inspection) we always use colorGroups,
+ * since colorCodeSet is a flat set that loses the per-group association.
+ */
+function getModelColorCodeSet(model: ShowcaseModel | ModelLike): Set<string> {
+  const colorCodeSet = (model as ModelLike).colorCodeSet;
+  if (Array.isArray(colorCodeSet) && colorCodeSet.length > 0) {
+    return new Set(colorCodeSet);
+  }
+  // Fallback for old builds without colorCodeSet (and for full ShowcaseModel)
+  const codes = new Set<string>();
+  for (const cg of model.colorGroups) {
+    for (const code of getColorCodes(cg)) {
+      codes.add(code);
+    }
+  }
+  return codes;
+}
+
+/**
  * Check if a model matches the color filter groups.
  * OR between groups, AND within each group.
  *
@@ -102,11 +129,12 @@ export function modelMatchesColorFilter(
 
   return groups.some((group) => {
     if (group.length === 1) {
-      // Single color: match across any colorGroup
+      // Single color: use pre-computed colorCodeSet for O(1) lookup (falls back to colorGroups)
       const code = group[0];
-      return model.colorGroups.some((cg) => getColorCodes(cg).includes(code));
+      return getModelColorCodeSet(model).has(code);
     }
     // AND group: a single colorGroup must contain ALL linked colors
+    // Must inspect per-colorGroup, so always use colorGroups array here
     return model.colorGroups.some((cg) => {
       const cgCodes = getColorCodes(cg);
       return group.every((code) => cgCodes.includes(code));

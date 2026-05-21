@@ -39,6 +39,8 @@ export interface ModelSummary {
   /** Minimum price in EUR cents across all variants */
   minPrice: number;
   colorGroups: ModelSummaryColorGroup[];
+  /** All unique color codes across ALL colorGroups (uncapped). Used for filter accuracy. */
+  colorCodeSet?: string[];
 }
 
 export interface UseModelSummariesReturn {
