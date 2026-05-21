@@ -35,7 +35,7 @@ export default function RootLayout({
          * (SearchManager.loadIndex). Alleen de kleine meta + category-tree
          * preloaden.
          */}
-        <link rel="preload" href="/data/model-summary.json" as="fetch" crossOrigin="anonymous" />
+        <link rel="preload" href="/data/model-summary-core.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/category-tree.json" as="fetch" crossOrigin="anonymous" />
 
         <style>{`

@@ -844,6 +844,21 @@ async function writeDataFiles(
   const summarySizeMB = (Buffer.byteLength(summaryJson, 'utf-8') / 1024 / 1024).toFixed(2);
   log(`Written model-summary.json (${summaries.length} models, ${summarySizeMB} MB)`);
 
+  // model-summary-core.json — only publicationStatus === 'core' (fast path, LOCKED state)
+  const summariesCore = summaries.filter((s) => s.publicationStatus === 'core');
+  const summariesExtended = summaries.filter((s) => s.publicationStatus !== 'core');
+
+  const coreSummaryJson = JSON.stringify(summariesCore);
+  await fs.writeFile(path.join(DATA_DIR, 'model-summary-core.json'), coreSummaryJson, 'utf-8');
+  const coreSizeMB = (Buffer.byteLength(coreSummaryJson, 'utf-8') / 1024 / 1024).toFixed(2);
+  log(`Written model-summary-core.json (${summariesCore.length} models, ${coreSizeMB} MB)`);
+
+  // model-summary-extended.json — all non-core models (lazy-loaded when UNLOCKED)
+  const extendedSummaryJson = JSON.stringify(summariesExtended);
+  await fs.writeFile(path.join(DATA_DIR, 'model-summary-extended.json'), extendedSummaryJson, 'utf-8');
+  const extendedSizeMB = (Buffer.byteLength(extendedSummaryJson, 'utf-8') / 1024 / 1024).toFixed(2);
+  log(`Written model-summary-extended.json (${summariesExtended.length} models, ${extendedSizeMB} MB)`);
+
   // slug-index.json
   const slugIndex: Record<string, string> = Object.fromEntries(slugToChunkFile);
   const slugIndexJson = JSON.stringify(slugIndex);
