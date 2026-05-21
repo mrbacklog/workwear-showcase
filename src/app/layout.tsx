@@ -26,6 +26,8 @@ export default function RootLayout({
     <html lang="nl">
       <head>
         <link rel="preconnect" href="https://api.databiz.app" />
+        <link rel="preconnect" href="https://workwear-images.databiz.app" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://workwear-images.databiz.app" />
         {/*
          * Geen prefetch van search-index.json (1.2 MB Brotli) of model-cards
          * chunks — die concurreren op mobiel met de eerste model-cards download
@@ -33,7 +35,7 @@ export default function RootLayout({
          * (SearchManager.loadIndex). Alleen de kleine meta + category-tree
          * preloaden.
          */}
-        <link rel="preload" href="/data/model-cards-meta.json" as="fetch" crossOrigin="anonymous" />
+        <link rel="preload" href="/data/model-summary.json" as="fetch" crossOrigin="anonymous" />
         <link rel="preload" href="/data/category-tree.json" as="fetch" crossOrigin="anonymous" />
 
         <style>{`

@@ -116,15 +116,19 @@ export function VirtualGrid({ items, preferredColorCodes, colorFilterGroups, vie
                   gap: GAP_PX,
                 }}
               >
-                {rowItems.map((model) => (
-                  <ModelCard
-                    key={model.slug}
-                    model={model}
-                    preferredColorCodes={preferredColorCodes}
-                    colorFilterGroups={colorFilterGroups}
-                    viewMode={viewMode}
-                  />
-                ))}
+                {rowItems.map((model, colIndex) => {
+                  const itemIndex = virtualRow.index * columnCount + colIndex;
+                  return (
+                    <ModelCard
+                      key={model.slug}
+                      model={model}
+                      preferredColorCodes={preferredColorCodes}
+                      colorFilterGroups={colorFilterGroups}
+                      viewMode={viewMode}
+                      priority={itemIndex < 6}
+                    />
+                  );
+                })}
               </div>
             </div>
           );
