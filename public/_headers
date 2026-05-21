@@ -1,21 +1,21 @@
 # R2 CDN images (served from workwear-images.databiz.app, not from Pages)
 # No headers needed for R2 — R2 upload sets Cache-Control: public, max-age=31536000, immutable
 
-# Static data files
-/data/*
-  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
-
-# Search index (changes on sync)
-/data/search-index.json
-  Cache-Control: public, max-age=1800, stale-while-revalidate=3600
-
-# Pages assets (JS, CSS) — already hashed by Next.js
-/_next/static/*
-  Cache-Control: public, max-age=31536000, immutable
-
-# HTML pages — short cache, always revalidate
+# Security headers — applied to all paths.
+# IMPORTANT: Cache-Control is intentionally NOT set here to prevent header stacking.
+# Cloudflare Pages concatenates headers from all matching rules (not overwrites),
+# so placing Cache-Control in /* would corrupt the value on every sub-path.
 /*
-  Cache-Control: public, max-age=0, must-revalidate
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
+
+# Pages assets (JS, CSS) — already hashed by Next.js, safe to cache forever
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Static data files — 1h fresh, 24h stale-while-revalidate.
+# NOTE: All /data/* files share one rule to avoid overlapping patterns that would
+# cause Cloudflare Pages to concatenate two Cache-Control values (the original bug).
+/data/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
