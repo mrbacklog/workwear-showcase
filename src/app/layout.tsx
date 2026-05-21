@@ -35,8 +35,15 @@ export default function RootLayout({
          * (SearchManager.loadIndex). Alleen de kleine meta + category-tree
          * preloaden.
          */}
-        <link rel="preload" href="/data/model-summary-core.json" as="fetch" crossOrigin="anonymous" />
-        <link rel="preload" href="/data/category-tree.json" as="fetch" crossOrigin="anonymous" />
+        {/*
+         * Geen `crossOrigin` attribuut: deze files zijn same-origin (zelfde
+         * domein als de pagina). Met `crossOrigin="anonymous"` zou de preload
+         * een CORS-request worden zonder credentials, terwijl de hook-fetch
+         * default same-origin credentials gebruikt → mismatch → preload werd
+         * als "ongebruikt" gemarkeerd door de browser.
+         */}
+        <link rel="preload" href="/data/model-summary-core.json" as="fetch" />
+        <link rel="preload" href="/data/category-tree.json" as="fetch" />
 
         <style>{`
           @keyframes page-load-progress {
