@@ -15,9 +15,11 @@ interface ModelCardProps {
   /** AND/OR filter groups — used to select the best matching colorGroup */
   colorFilterGroups?: ColorFilterGroup[];
   viewMode?: ViewMode;
+  /** Pass true for the first ~6 visible cards to enable eager/high-priority loading (LCP) */
+  priority?: boolean;
 }
 
-function ModelCardInner({ model, preferredColorCodes, colorFilterGroups, viewMode = 'grid' }: ModelCardProps) {
+function ModelCardInner({ model, preferredColorCodes, colorFilterGroups, viewMode = 'grid', priority = false }: ModelCardProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const initialGroupIndex = useMemo(() => {
@@ -55,6 +57,7 @@ function ModelCardInner({ model, preferredColorCodes, colorFilterGroups, viewMod
       alt={`${model.brandName} ${model.modelName}`}
       className="h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+      priority={priority}
     />
   ) : (
     <div className="flex h-full w-full items-center justify-center text-sm text-gray-300">
