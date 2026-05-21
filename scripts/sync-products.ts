@@ -388,7 +388,30 @@ async function exportModels(changedModelIds: string[]): Promise<ShowcaseExportRe
     const batch = batches[i];
     log(`  Batch ${i + 1}/${batches.length}: ${batch.length} models...`);
 
-    const data = await exportModelsSingle(batch);
+    // Retry up to 3 times on transient network errors (e.g. "TypeError: terminated")
+    let data: Awaited<ReturnType<typeof exportModelsSingle>> | null = null;
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        data = await exportModelsSingle(batch);
+        lastError = null;
+        break;
+      } catch (err) {
+        lastError = err;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (attempt < 3) {
+          const backoffMs = 2000 * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+          log(`  Batch ${i + 1}/${batches.length} attempt ${attempt} failed (${errMsg}). Retry in ${backoffMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        } else {
+          log(`  Batch ${i + 1}/${batches.length} attempt ${attempt} failed (${errMsg}). Giving up.`);
+        }
+      }
+    }
+    if (data === null) {
+      throw lastError instanceof Error ? lastError : new Error(`Batch ${i + 1} failed after 3 attempts`);
+    }
+
     allModels.push(...data.models);
     totalVariants += data.meta.totalVariants;
     totalImages += data.meta.totalImages;
