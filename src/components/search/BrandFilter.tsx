@@ -11,14 +11,10 @@ interface BrandFilterProps {
 
 export function BrandFilter({ brands, selectedSlugs, onToggle }: BrandFilterProps) {
   const sortedBrands = useMemo(() => {
-    // Selected brands first, then alphabetical
-    return [...brands].sort((a, b) => {
-      const aSelected = selectedSlugs.has(a.slug) ? 0 : 1;
-      const bSelected = selectedSlugs.has(b.slug) ? 0 : 1;
-      if (aSelected !== bSelected) return aSelected - bSelected;
-      return a.name.localeCompare(b.name, 'nl');
-    });
-  }, [brands, selectedSlugs]);
+    // Altijd alfabetisch — een geselecteerd merk blijft op zijn plek staan i.p.v.
+    // naar boven te springen (backlog 0e730c27).
+    return [...brands].sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+  }, [brands]);
 
   return (
     <div>
