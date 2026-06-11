@@ -174,13 +174,34 @@ function ColorSizeMatrix({
   selectedColorIndex,
   onSelectColor,
   showPrices,
+  initialSize,
 }: {
   colorGroups: ColorGroup[];
   selectedColorIndex: number;
   onSelectColor: (index: number) => void;
   showPrices: boolean;
+  initialSize?: string;
 }) {
   const [activeCell, setActiveCell] = useState<ActiveCell | null>(null);
+
+  // Preselect size from URL param (?size=) once colorGroups are available
+  useEffect(() => {
+    if (!initialSize || colorGroups.length === 0) return;
+    const cg = colorGroups[selectedColorIndex];
+    if (!cg) return;
+    const variant =
+      cg.variants.find((v) => v.sizeRaw === initialSize) ??
+      cg.variants.find((v) => v.sizeDisplay === initialSize);
+    if (!variant) return;
+    const size = variant.sizeDisplay || variant.sizeRaw;
+    setActiveCell({
+      colorIdx: selectedColorIndex,
+      size,
+      variant,
+      colorName: cg.colorRaw || cg.colorName,
+      anchorRect: new DOMRect(),
+    });
+  }, [initialSize, colorGroups, selectedColorIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allSizes = useMemo(() => {
     const sizeSet = new Set<string>();
@@ -355,6 +376,7 @@ export default function ProductClient() {
   const { model, isLoading, error } = useModelDetail(slug);
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [headerSearch, setHeaderSearch] = useState('');
+  const [initialSize, setInitialSize] = useState<string | undefined>(undefined);
 
   const handleBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -389,6 +411,9 @@ export default function ProductClient() {
       }
       if (idx >= 0) setSelectedColorIndex(idx);
     }
+    // Read initial size from URL query param (?size=RAW) — applied after color resolves
+    const sizeParam = searchParams.get('size');
+    if (sizeParam) setInitialSize(sizeParam);
   }, [model]);
 
   // Check enrichment status on model load (for authenticated users)
@@ -525,6 +550,7 @@ export default function ProductClient() {
               selectedColorIndex={selectedColorIndex}
               onSelectColor={handleColorSelect}
               showPrices={isUnlocked}
+              initialSize={initialSize}
             />
           </div>
 
