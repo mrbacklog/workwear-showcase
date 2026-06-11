@@ -55,6 +55,14 @@ export interface UrlLookupEntry {
   size?: string;
 }
 
+/** Build the canonical model-page redirect target from a lookup entry. */
+export function buildRedirectTarget(origin: string, entry: UrlLookupEntry): string {
+  const u = new URL(`/product/${entry.slug}/`, origin);
+  if (entry.color) u.searchParams.set('color', entry.color);
+  if (entry.size) u.searchParams.set('size', entry.size);
+  return u.toString();
+}
+
 import type { ShowcaseModel } from '@/types/product';
 
 /**
