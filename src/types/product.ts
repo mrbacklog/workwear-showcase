@@ -91,6 +91,8 @@ export interface ColorGroup {
   variants: ShowcaseVariant[];
   /** Images for this color group */
   images: ShowcaseImage[];
+  /** Stable color-variant id (UUID hex, no dashes) — used in stable color-level URLs */
+  colorVariantId: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +138,8 @@ export interface ShowcaseModel {
   fabricTypeWeight: string | null;
   /** Variants grouped by color */
   colorGroups: ColorGroup[];
+  /** Stable, opaque model anchor for canonical/stable URLs (minted by the backend) */
+  modelPublicId: string | null;
 }
 
 // ---------------------------------------------------------------------------
