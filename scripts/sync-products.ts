@@ -25,6 +25,7 @@ import { readdirSync, existsSync } from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import MiniSearch from 'minisearch';
+import { buildUrlLookup } from '../src/lib/stable-url';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -84,6 +85,7 @@ interface ShowcaseColorGroup {
   tertiaryCode: string | null;
   isFluorescent: boolean;
   isHighVisibility: boolean;
+  color_variant_id?: string | null;
   variants: ShowcaseVariant[];
   images: ShowcaseImage[];
 }
@@ -107,6 +109,7 @@ interface ShowcaseModel {
   careInstructions: string | null;
   countryOfOrigin: string | null;
   fabricTypeWeight: string | null;
+  model_public_id?: string | null;
   colorGroups: ShowcaseColorGroup[];
 }
 
@@ -153,6 +156,7 @@ interface FrontendColorGroup {
   tertiaryCode: string | null;
   isFluorescent: boolean;
   isHighVisibility: boolean;
+  colorVariantId: string | null;
   variants: {
     ean: string;
     sizeRaw: string;
@@ -191,6 +195,7 @@ interface FrontendModel {
   careInstructions: string | null;
   countryOfOrigin: string | null;
   fabricTypeWeight: string | null;
+  modelPublicId: string | null;
   colorGroups: FrontendColorGroup[];
 }
 
@@ -484,6 +489,7 @@ function transformModel(model: ShowcaseModel): FrontendModel {
     tertiaryCode: cg.tertiaryCode,
     isFluorescent: cg.isFluorescent ?? false,
     isHighVisibility: cg.isHighVisibility ?? false,
+    colorVariantId: cg.color_variant_id ?? null,
     variants: cg.variants.map((v) => ({
       ean: v.ean,
       sizeRaw: v.sizeRaw,
@@ -535,6 +541,7 @@ function transformModel(model: ShowcaseModel): FrontendModel {
     careInstructions: model.careInstructions ?? null,
     countryOfOrigin: model.countryOfOrigin ?? null,
     fabricTypeWeight: model.fabricTypeWeight ?? null,
+    modelPublicId: model.model_public_id ?? null,
     colorGroups,
   };
 }
@@ -964,6 +971,21 @@ async function writeDataFiles(
   const searchIndexPath = path.join(DATA_DIR, 'search-index.json');
   await fs.writeFile(searchIndexPath, searchIndex, 'utf-8');
   log(`Written ${searchIndexPath}`);
+
+  // url-lookup/ shards (stable deep-link tail -> { slug, color?, size? })
+  const urlLookupDir = path.join(DATA_DIR, 'url-lookup');
+  try { await fs.rm(urlLookupDir, { recursive: true, force: true }); } catch { /* ignore */ }
+  await fs.mkdir(urlLookupDir, { recursive: true });
+  // Cast: FrontendModel is structurally compatible for the fields buildUrlLookup accesses
+  // (slug, modelPublicId, colorGroups[].{colorVariantId,colorRaw,variants[].{ean,sizeRaw}})
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const urlLookup = buildUrlLookup(models as any);
+  let totalTails = 0;
+  for (const [shard, entries] of Object.entries(urlLookup)) {
+    await fs.writeFile(path.join(urlLookupDir, `${shard}.json`), JSON.stringify(entries), 'utf-8');
+    totalTails += Object.keys(entries).length;
+  }
+  log(`Written url-lookup/ (${Object.keys(urlLookup).length} shards, ${totalTails} tails)`);
 
   // sync-manifest.json
   const totalImages = models.reduce((sum, m) =>

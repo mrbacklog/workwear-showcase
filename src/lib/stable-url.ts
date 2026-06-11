@@ -54,3 +54,39 @@ export interface UrlLookupEntry {
   /** sizeRaw to preselect via ?size= (only for ean-level). */
   size?: string;
 }
+
+import type { ShowcaseModel } from '@/types/product';
+
+/**
+ * Build the stable-URL lookup, grouped by shard. Key = the exact URL tail:
+ *   - bare EAN (13 digits)        -> { slug, color, size }
+ *   - 'c' + colorVariantId.hex    -> { slug, color }
+ *   - 'm' + modelPublicId         -> { slug }
+ * Returns shard -> { tail -> entry }. Pure (no IO) so it is unit-testable.
+ */
+export function buildUrlLookup(
+  models: ShowcaseModel[],
+): Record<string, Record<string, UrlLookupEntry>> {
+  const shards: Record<string, Record<string, UrlLookupEntry>> = {};
+  const put = (tail: string, entry: UrlLookupEntry): void => {
+    const shard = shardOf(tail);
+    (shards[shard] ??= {})[tail] = entry;
+  };
+  for (const model of models) {
+    if (model.modelPublicId) {
+      put(`m${model.modelPublicId}`, { slug: model.slug });
+    }
+    for (const cg of model.colorGroups) {
+      if (cg.colorVariantId) {
+        const hex = cg.colorVariantId.replace(/-/g, '');
+        put(`c${hex}`, { slug: model.slug, color: cg.colorRaw });
+      }
+      for (const v of cg.variants) {
+        if (v.ean) {
+          put(v.ean, { slug: model.slug, color: cg.colorRaw, size: v.sizeRaw });
+        }
+      }
+    }
+  }
+  return shards;
+}
