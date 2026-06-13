@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import type { Metadata } from 'next';
 import ProductClient from './ProductClient';
 
 interface ModelCard {
@@ -9,6 +10,13 @@ interface ModelCard {
 interface CategoryChunkEntry {
   file: string;
   subChunks?: string[];
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> },
+): Promise<Metadata> {
+  const { slug } = await params;
+  return { alternates: { canonical: `/product/${slug}/` } };
 }
 
 export function generateStaticParams() {
