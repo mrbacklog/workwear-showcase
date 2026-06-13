@@ -148,10 +148,6 @@ jobs:
             exit 1
           fi
 
-      - name: Copy functions into out/
-        if: steps.check-data.outputs.has_data == 'true'
-        run: cp -r functions out/
-
       - name: Deploy to Cloudflare Pages
         if: steps.check-data.outputs.has_data == 'true'
         run: npx wrangler pages deploy out --project-name=workwear-showcase --branch main
