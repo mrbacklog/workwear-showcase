@@ -7,6 +7,8 @@ out/
 
 # generated data (rebuilt by sync script)
 public/data/
+!public/data/url-lookup/
+!public/data/url-lookup/*.json
 public/images/thumbs/
 public/images/sprites/
 public/images/full/
