@@ -237,6 +237,8 @@ interface ModelSummary {
     isFluorescent: boolean;
     isHighVisibility: boolean;
   }>;
+  /** All unique sizeDisplay values across all variants. Used for client-side size filtering. */
+  sizeSet?: string[];
 }
 
 // MiniSearch document
@@ -856,6 +858,14 @@ async function writeDataFiles(
       if (cg.tertiaryCode) allColorCodes.add(cg.tertiaryCode);
     }
 
+    // Collect all unique sizeDisplay values for size filter
+    const allSizes = new Set<string>();
+    for (const cg of m.colorGroups) {
+      for (const v of cg.variants) {
+        if (v.sizeDisplay) allSizes.add(v.sizeDisplay);
+      }
+    }
+
     const totalColorGroups = m.colorGroups.length;
     const COLOR_GROUPS_CAP = 12;
     if (totalColorGroups > COLOR_GROUPS_CAP) {
@@ -887,6 +897,7 @@ async function writeDataFiles(
       })),
       // Complete set of color codes for accurate filter matching (uncapped)
       colorCodeSet: allColorCodes.size > 0 ? Array.from(allColorCodes) : undefined,
+      sizeSet: allSizes.size > 0 ? Array.from(allSizes) : undefined,
     };
   });
   if (cappedModelCount > 0) {

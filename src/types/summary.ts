@@ -41,6 +41,8 @@ export interface ModelSummary {
   colorGroups: ModelSummaryColorGroup[];
   /** All unique color codes across ALL colorGroups (uncapped). Used for filter accuracy. */
   colorCodeSet?: string[];
+  /** All unique sizeDisplay values across all variants. Used for client-side size filtering. */
+  sizeSet?: string[];
 }
 
 export interface UseModelSummariesReturn {
