@@ -57,13 +57,13 @@ Import → size_display ingevuld (string, geen categorie)
 
 ### Nieuwe filtergroepen in de showcase
 
-| Groep | SizeCategory code | Voorbeelden |
-|-------|------------------|-------------|
-| Confectie | CONF | XS, S, M, L, XL, XXL, 3XL |
-| Numeriek EU | NUM | 44, 46, 48, 50, 52 |
-| Schoenmaten | SHOE | 38, 39, 40, 41, 42, 43 |
-| Broeksmaten | PANT | W32/L34, 34/32 |
-| Kindermaten | KIDS | 92, 104, 116, 128, 140 |
+| Groep | SizeCategory code | UI-label | Voorbeelden |
+|-------|------------------|----------|-------------|
+| confectie | CONF | Confectie | XS, S, M, L, L-XL, XL, XXL, 3XL |
+| kledingmaten | NUM | Kledingmaten | 44, 46, 48, 50, 52 |
+| schoenmaten | SHOE | Schoenmaten | 38, 39, 40, 41, 42, 43 |
+| broeksmaten | PANT | Broeksmaten | W32/L34, 34/32 |
+| kindermaten | KIDS | Kindermaten | 92, 104, 116, 128, 140 |
 
 > **Overig-groep verdwijnt.** Maten die niet geclassificeerd zijn (UNI, onbekend) worden niet getoond in de filter.
 
@@ -215,18 +215,27 @@ export interface ModelSummary {
 
 ```typescript
 // Nieuw type
-export type SizeGroup = 'confectie' | 'numeriek' | 'schoenmaten' | 'broeksmaten' | 'kindermaaten';
+export type SizeGroup = 'confectie' | 'kledingmaten' | 'schoenmaten' | 'broeksmaten' | 'kindermaten';
 
 // GROUP_ORDER (geen 'overig' meer)
-export const GROUP_ORDER: SizeGroup[] = ['confectie', 'schoenmaten', 'numeriek', 'broeksmaten', 'kindermaaten'];
+export const GROUP_ORDER: SizeGroup[] = ['confectie', 'kledingmaten', 'schoenmaten', 'broeksmaten', 'kindermaten'];
+
+// UI-labels per groep
+export const GROUP_LABELS: Record<SizeGroup, string> = {
+  confectie:    'Confectie',
+  kledingmaten: 'Kledingmaten',
+  schoenmaten:  'Schoenmaten',
+  broeksmaten:  'Broeksmaten',
+  kindermaten:  'Kindermaten',
+};
 
 // Mapping SizeCategory code → SizeGroup
 const CATEGORY_TO_GROUP: Record<string, SizeGroup | null> = {
   CONF: 'confectie',
   SHOE: 'schoenmaten',
   PANT: 'broeksmaten',
-  NUM:  'numeriek',
-  KIDS: 'kindermaaten',
+  NUM:  'kledingmaten',
+  KIDS: 'kindermaten',
   UNI:  null,      // niet tonen
   UNKNOWN: null,   // niet tonen (of fallback regex)
 };
@@ -236,6 +245,43 @@ export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap { ... 
 ```
 
 **Fallback voor UNKNOWN:** als category = 'UNKNOWN', pas de huidige `classifySizeGroup` regex toe als best-effort. Dit zorgt dat niet-verrijkte data nog steeds (deels) werkt.
+
+### 8. Combinatiematen: classificatie en filterlogica
+
+**Classificatie** — CONF-regex uitbreiden met `X-Y` patroon:
+
+```typescript
+// Herkent "L-XL", "S-M", "XL-XXL", "2XL-3XL" etc. als CONF
+const COMBINATION_CONF = /^(XS|S|M|L|XL|XXL|\d+XL)-(XS|S|M|L|XL|XXL|\d+XL)$/i;
+```
+
+**Filterlogica** — `modelMatchesSizeFilter` expandeert combinatiematen bij het matchen:
+
+```typescript
+// "L-XL" → ["L-XL", "L", "XL"] — model matcht als gebruiker L, XL of L-XL selecteert
+function expandSize(size: string): string[] {
+  const match = size.match(/^(.+)-(.+)$/);
+  if (match && isCombinationConfectie(size)) {
+    return [size, match[1].toUpperCase(), match[2].toUpperCase()];
+  }
+  return [size];
+}
+
+export function modelMatchesSizeFilter(model: ModelSummaryLike, selected: Set<string>): boolean {
+  if (selected.size === 0) return true;
+  for (const item of model.sizeItems ?? []) {
+    for (const expanded of expandSize(item.value)) {
+      if (selected.has(expanded)) return true;
+    }
+  }
+  return false;
+}
+```
+
+**Sortering in CONF-groep** — combinatiematen sorteren ná hun laagste component:
+`CONFECTIE_ORDER` uitbreiden met combinaties: `[..., 'L', 'L-XL', 'XL', 'XL-XXL', 'XXL', ...]`
+
+**Backend** — `SizeCategoryEnrichmentService` herkent "L-XL" als CONF via dezelfde regex (exact match in `size_values` faalt → pattern-fallback classificeert als CONF).
 
 ---
 
