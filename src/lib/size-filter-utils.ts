@@ -28,7 +28,7 @@ export function classifySizeGroup(size: string): SizeGroup {
 }
 
 function sortConfectie(sizes: string[]): string[] {
-  return sizes.sort((a, b) => {
+  return [...sizes].sort((a, b) => {
     const ia = CONFECTIE_ORDER.indexOf(a.toUpperCase());
     const ib = CONFECTIE_ORDER.indexOf(b.toUpperCase());
     if (ia === -1 && ib === -1) return a.localeCompare(b);
@@ -39,11 +39,11 @@ function sortConfectie(sizes: string[]): string[] {
 }
 
 function sortNumeriek(sizes: string[]): string[] {
-  return sizes.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+  return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 }
 
 function sortBroek(sizes: string[]): string[] {
-  return sizes.sort((a, b) => {
+  return [...sizes].sort((a, b) => {
     const wa = parseInt(a.replace(/^W?(\d+).*/, '$1'), 10);
     const wb = parseInt(b.replace(/^W?(\d+).*/, '$1'), 10);
     return wa - wb;
