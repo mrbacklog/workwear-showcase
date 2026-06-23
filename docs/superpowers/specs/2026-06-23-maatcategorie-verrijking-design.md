@@ -160,15 +160,54 @@ class SizeCategoryEnrichmentService:
 
 ### 4. Brand pipeline integratie
 
+**Ontwerpkeuze: alleen lege waarden vullen**
+
+De pipeline-integratie vult uitsluitend varianten waar `size_category_id IS NULL`. Maatcategorie wijzigt zelden (alleen bij nieuwe `category_mapping.py`-entries of productcategorie-correcties), dus overhead van altijd opnieuw classifceren is onnodig.
+
+Voor situaties waar een volledige herclassificatie nodig is (na uitbreiden van `category_mapping.py`, of na bulk-correctie van productcategorieën) bestaat een aparte resync-capability — zie §4b.
+
 In `promotion_pipeline.py`, na de categorisatie-stap:
 
 ```python
 from app.services.size_normalization.size_category_enrichment import SizeCategoryEnrichmentService
 
-# Na categorisatie (Fase 2), vóór Fase 3
+# Na categorisatie (Fase 2), vóór Fase 3 — vult alleen NULL-waarden
 size_cat_service = SizeCategoryEnrichmentService()
 await size_cat_service.enrich_brand(db, brand_id)
 ```
+
+### 4b. Resync-capability: volledige herclassificatie per merk
+
+Voor wanneer de mapping of productcategorieën zijn gewijzigd en bestaande data opnieuw geclassificeerd moet worden.
+
+**Backend:** `SizeCategoryEnrichmentService` krijgt een tweede methode:
+
+```python
+async def resync_brand(self, db: AsyncSession, brand_id: int) -> int:
+    """
+    Herclassificeert ALLE varianten van een merk (ook reeds ingevulde).
+    Bedoeld voor na een update van category_mapping.py of bulk-correctie.
+    Retourneert aantal bijgewerkte varianten.
+    """
+```
+
+Dit wordt als ARQ-worker-task ingepakt zodat het niet de request-thread blokkeert:
+
+```python
+# worker task
+async def resync_size_categories_task(ctx, brand_id: int):
+    ...
+```
+
+**Frontend:** ⚠️ **Vereist Poort-1 onderzoek vóór implementatie.**
+
+De exacte UI-plek en UX voor het triggeren van een resync moet onderzocht worden in de brand hub. Vragen die beantwoord moeten worden:
+- Waar in de brand hub past een "Maatcategorieën herclassificeren" actie? (instellingen-tab, kwaliteits-tab, of eigen sectie?)
+- Moet dit per merk of ook globaal (alle merken)?
+- Hoe toon je de voortgang (SSE-stream, polling, of fire-and-forget met een notificatie)?
+- Is er een statusweergave nodig ("laatste resync: 2026-06-23, 847/1.203 varianten geclassificeerd")?
+
+> **Implementatiestrategie:** bouw backend + worker-task eerst volledig af. Doe Poort-1 onderzoek naar de brand hub vóór de frontend-taak in het implementatieplan wordt opgepakt.
 
 ### 5. Showcase sync: `sizeItems` i.p.v. `sizeSet`
 
