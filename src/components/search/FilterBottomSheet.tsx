@@ -4,8 +4,10 @@ import { useEffect } from 'react';
 import { ColorFilter } from '@/components/search/ColorFilter';
 import { BrandFilter } from '@/components/search/BrandFilter';
 import { SpecialColorFilter } from '@/components/search/SpecialColorFilter';
+import { SizeFilter } from '@/components/search/SizeFilter';
 import type { ColorInfo } from '@/components/search/ColorFilter';
 import type { BrandInfo } from '@/hooks/useModelCards';
+import type { SizeGroupMap } from '@/lib/size-filter-utils';
 
 interface FilterBottomSheetProps {
   isOpen: boolean;
@@ -25,6 +27,10 @@ interface FilterBottomSheetProps {
   fluorescentCount: number;
   onToggleHiVis: () => void;
   onToggleFluorescent: () => void;
+  // Sizes
+  availableSizes: SizeGroupMap;
+  selectedSizes: Set<string>;
+  onSizeChange: (sizes: Set<string>) => void;
   // Active count for display
   activeFilterCount: number;
 }
@@ -44,6 +50,9 @@ export function FilterBottomSheet({
   fluorescentCount,
   onToggleHiVis,
   onToggleFluorescent,
+  availableSizes,
+  selectedSizes,
+  onSizeChange,
   activeFilterCount,
 }: FilterBottomSheetProps) {
   // Close on Escape key
@@ -139,6 +148,15 @@ export function FilterBottomSheet({
             brands={brands}
             selectedSlugs={selectedBrands}
             onToggle={onBrandToggle}
+          />
+
+          <hr className="border-gray-200" />
+
+          {/* Maten */}
+          <SizeFilter
+            available={availableSizes}
+            selected={selectedSizes}
+            onChange={onSizeChange}
           />
         </div>
 

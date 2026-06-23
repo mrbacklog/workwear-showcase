@@ -14,6 +14,14 @@ import { BrandFilter } from '@/components/search/BrandFilter';
 import { ColorFilter, COLOR_PALETTE } from '@/components/search/ColorFilter';
 import { SpecialColorFilter } from '@/components/search/SpecialColorFilter';
 import { FilterBottomSheet } from '@/components/search/FilterBottomSheet';
+import { SizeFilter } from '@/components/search/SizeFilter';
+import {
+  buildSizeGroups,
+  modelMatchesSizeFilter,
+  parseSizeParam,
+  serializeSizeParam,
+  type SizeGroupMap,
+} from '@/lib/size-filter-utils';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
 import {
   parseColorParam,
@@ -83,6 +91,12 @@ function SearchPageContent() {
   // Hi-vis / Fluorescent toggles
   const [hiVisActive, setHiVisActive] = useState(() => searchParams.get('hivis') === '1');
   const [fluorescentActive, setFluorescentActive] = useState(() => searchParams.get('fluorescent') === '1');
+
+  // Size filter
+  const sizesParam = searchParams.get('sizes') ?? '';
+  const [selectedSizes, setSelectedSizes] = useState<Set<string>>(
+    () => parseSizeParam(sizesParam)
+  );
 
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -166,6 +180,16 @@ function SearchPageContent() {
     return result;
   }, [colorFilteredModels, hiVisActive, fluorescentActive]);
 
+  // Size-filtered models (OR: model zichtbaar als minstens één variant de maat heeft)
+  const sizeFilteredModels = useMemo(() => {
+    if (selectedSizes.size === 0) return specialFilteredModels;
+    return specialFilteredModels.filter((m) => modelMatchesSizeFilter(m, selectedSizes));
+  }, [specialFilteredModels, selectedSizes]);
+
+  const sizesForFilter = useMemo((): SizeGroupMap => {
+    return buildSizeGroups(specialFilteredModels);
+  }, [specialFilteredModels]);
+
   // ---------------------------------------------------------------------------
   // Leaf counts: how many models belong directly to each category code
   // ---------------------------------------------------------------------------
@@ -236,14 +260,20 @@ function SearchPageContent() {
         return model && model.colorGroups.some((cg) => cg.isFluorescent);
       });
     }
+    if (selectedSizes.size > 0) {
+      filtered = filtered.filter((r) => {
+        const model = getBySlug(r.slug);
+        return model && modelMatchesSizeFilter(model, selectedSizes);
+      });
+    }
     return filtered;
-  }, [results, isUnlocked, validCodesSet, selectedBrands, colorFilterGroups, hiVisActive, fluorescentActive, getBySlug]);
+  }, [results, isUnlocked, validCodesSet, selectedBrands, colorFilterGroups, hiVisActive, fluorescentActive, selectedSizes, getBySlug]);
 
   // Browse mode: no query but category selected → show all models in category
   const browseModels = useMemo(() => {
     if (!selectedCategory || !validCodesSet) return [];
-    return specialFilteredModels.filter((m) => validCodesSet.has(m.categoryCode));
-  }, [selectedCategory, validCodesSet, specialFilteredModels]);
+    return sizeFilteredModels.filter((m) => validCodesSet.has(m.categoryCode));
+  }, [selectedCategory, validCodesSet, sizeFilteredModels]);
 
   // Contextual color counts: based on brand + category selection (not color selection)
   // Now counts across primary + secondary + tertiary
@@ -419,6 +449,14 @@ function SearchPageContent() {
     syncUrl({ fluorescent: next ? '1' : null });
   }, [fluorescentActive, syncUrl]);
 
+  const handleSizeToggle = useCallback(
+    (sizes: Set<string>) => {
+      setSelectedSizes(sizes);
+      syncUrl({ sizes: sizes.size > 0 ? serializeSizeParam(sizes) : null });
+    },
+    [syncUrl],
+  );
+
   // ---------------------------------------------------------------------------
   // Derived state
   // ---------------------------------------------------------------------------
@@ -429,6 +467,7 @@ function SearchPageContent() {
     (selectedCategory ? 1 : 0) +
     selectedColors.size +
     selectedBrands.size +
+    selectedSizes.size +
     (hiVisActive ? 1 : 0) +
     (fluorescentActive ? 1 : 0);
 
@@ -477,13 +516,21 @@ function SearchPageContent() {
                 selectedSlugs={selectedBrands}
                 onToggle={handleBrandToggle}
               />
+
+              <hr className="my-4 border-gray-200" />
+
+              <SizeFilter
+                available={sizesForFilter}
+                selected={selectedSizes}
+                onChange={handleSizeToggle}
+              />
             </div>
           </aside>
 
           {/* Main content */}
           <div className="flex-1">
             {/* Active filter chips */}
-            {(selectedCategoryNode || colorFilterGroups.length > 0 || selectedBrands.size > 0 || hiVisActive || fluorescentActive) && (
+            {(selectedCategoryNode || colorFilterGroups.length > 0 || selectedBrands.size > 0 || selectedSizes.size > 0 || hiVisActive || fluorescentActive) && (
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {selectedCategoryNode && (
                   <>
@@ -630,6 +677,27 @@ function SearchPageContent() {
                     </span>
                   );
                 })}
+
+                {/* Size filter chips */}
+                {[...selectedSizes].map((size) => (
+                  <span
+                    key={size}
+                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800"
+                  >
+                    {size}
+                    <button
+                      onClick={() => {
+                        const next = new Set(selectedSizes);
+                        next.delete(size);
+                        handleSizeToggle(next);
+                      }}
+                      className="ml-1 text-gray-400 hover:text-gray-600"
+                      aria-label={`Maat ${size} verwijderen`}
+                    >
+                      &#x2715;
+                    </button>
+                  </span>
+                ))}
               </div>
             )}
 
@@ -706,7 +774,7 @@ function SearchPageContent() {
                   />
                 </>
               )
-            ) : isModelsLoading && specialFilteredModels.length === 0 ? (
+            ) : isModelsLoading && sizeFilteredModels.length === 0 ? (
               /* Loading state: show skeleton grid while first chunk loads */
               <>
                 <p className="mb-6 text-sm text-gray-400 animate-pulse">Producten laden...</p>
@@ -717,13 +785,13 @@ function SearchPageContent() {
               <>
                 <div className="mb-6 flex items-center justify-between">
                   <p className="text-sm text-gray-500">
-                    {specialFilteredModels.length}{' '}
-                    {specialFilteredModels.length === 1 ? 'product' : 'producten'}
+                    {sizeFilteredModels.length}{' '}
+                    {sizeFilteredModels.length === 1 ? 'product' : 'producten'}
                   </p>
                   <ViewSwitcher mode={viewMode} onChange={handleViewChange} />
                 </div>
                 <VirtualGrid
-                  items={specialFilteredModels}
+                  items={sizeFilteredModels}
                   preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
                   colorFilterGroups={colorFilterGroups.length > 0 ? colorFilterGroups : undefined}
                   viewMode={viewMode}
@@ -768,6 +836,9 @@ function SearchPageContent() {
         onToggleHiVis={handleToggleHiVis}
         onToggleFluorescent={handleToggleFluorescent}
         activeFilterCount={activeFilterCount}
+        availableSizes={sizesForFilter}
+        selectedSizes={selectedSizes}
+        onSizeChange={handleSizeToggle}
       />
     </>
   );
