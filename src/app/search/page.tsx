@@ -774,7 +774,7 @@ function SearchPageContent() {
                   />
                 </>
               )
-            ) : isModelsLoading && sizeFilteredModels.length === 0 ? (
+            ) : isModelsLoading && specialFilteredModels.length === 0 ? (
               /* Loading state: show skeleton grid while first chunk loads */
               <>
                 <p className="mb-6 text-sm text-gray-400 animate-pulse">Producten laden...</p>
