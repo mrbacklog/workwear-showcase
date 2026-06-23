@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import type { SizeGroupMap, SizeGroup } from '@/lib/size-filter-utils';
 
 interface SizeFilterProps {
@@ -18,16 +19,16 @@ const GROUP_LABELS: Record<SizeGroup, string> = {
 const GROUP_ORDER: SizeGroup[] = ['confectie', 'numeriek', 'broek', 'overig'];
 
 export function SizeFilter({ available, selected, onChange }: SizeFilterProps) {
-  const visibleGroups = GROUP_ORDER.filter((g) => available[g].length > 0);
-
-  if (visibleGroups.length === 0) return null;
-
-  function toggle(size: string) {
+  const toggle = useCallback((size: string) => {
     const next = new Set(selected);
     if (next.has(size)) next.delete(size);
     else next.add(size);
     onChange(next);
-  }
+  }, [selected, onChange]);
+
+  const visibleGroups = GROUP_ORDER.filter((g) => available[g].length > 0);
+
+  if (visibleGroups.length === 0) return null;
 
   return (
     <div>
@@ -63,7 +64,8 @@ export function SizeFilter({ available, selected, onChange }: SizeFilterProps) {
                       key={size}
                       type="button"
                       onClick={() => toggle(size)}
-                      className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm transition-colors hover:bg-gray-50 ${
+                      aria-pressed={isSelected}
+                      className={`flex min-h-8 w-full items-center gap-2 px-2 py-1.5 text-left text-sm transition-colors hover:bg-gray-50 ${
                         isSelected ? 'bg-gray-50' : ''
                       }`}
                     >
