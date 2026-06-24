@@ -1,22 +1,13 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { SizeGroupMap, SizeGroup } from '@/lib/size-filter-utils';
+import { GROUP_ORDER, GROUP_LABELS, type SizeGroupMap, type SizeGroup } from '@/lib/size-filter-utils';
 
 interface SizeFilterProps {
   available: SizeGroupMap;
   selected: Set<string>;
   onChange: (sizes: Set<string>) => void;
 }
-
-const GROUP_LABELS: Record<SizeGroup, string> = {
-  confectie: 'Confectie',
-  numeriek: 'Numeriek (EU)',
-  broek: 'Broeksmaten',
-  overig: 'Overig',
-};
-
-const GROUP_ORDER: SizeGroup[] = ['confectie', 'numeriek', 'broek', 'overig'];
 
 export function SizeFilter({ available, selected, onChange }: SizeFilterProps) {
   const toggle = useCallback((size: string) => {

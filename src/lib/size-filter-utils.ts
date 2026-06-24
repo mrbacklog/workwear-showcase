@@ -1,30 +1,69 @@
-// src/lib/size-filter-utils.ts
+'use client';
 
-export type SizeGroup = 'confectie' | 'numeriek' | 'broek' | 'overig';
+import type { SizeItem } from '@/types/summary';
+
+export type SizeGroup = 'confectie' | 'kledingmaten' | 'schoenmaten' | 'broeksmaten' | 'kindermaten';
 
 export type SizeGroupMap = Record<SizeGroup, string[]>;
 
 export interface ModelSummaryLike {
-  sizeSet?: string[];
+  sizeItems?: SizeItem[];
+  sizeSet?: string[];   // backwards-compat fallback
 }
 
-const CONFECTIE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
+export const GROUP_ORDER: SizeGroup[] = [
+  'confectie',
+  'kledingmaten',
+  'schoenmaten',
+  'broeksmaten',
+  'kindermaten',
+];
 
-/**
- * Classifies a sizeDisplay value into a size group.
- */
-export function classifySizeGroup(size: string): SizeGroup {
+export const GROUP_LABELS: Record<SizeGroup, string> = {
+  confectie:    'Confectie',
+  kledingmaten: 'Kledingmaten',
+  schoenmaten:  'Schoenmaten',
+  broeksmaten:  'Broeksmaten',
+  kindermaten:  'Kindermaten',
+};
+
+const CATEGORY_TO_GROUP: Record<string, SizeGroup | null> = {
+  CONF:    'confectie',
+  SHOE:    'schoenmaten',
+  PANT:    'broeksmaten',
+  NUM:     'kledingmaten',
+  KIDS:    'kindermaten',
+  UNI:     null,
+  UNKNOWN: null,  // UNKNOWN valt terug op regex hieronder
+};
+
+// Sorteervolgorde voor confectie
+const CONFECTIE_ORDER = [
+  'XS', 'S', 'M', 'L', 'L-XL', 'XL', 'XL-XXL', 'XXL', 'XXL-3XL',
+  '3XL', '3XL-4XL', '4XL', '5XL', '6XL',
+];
+
+// Regex patronen voor UNKNOWN-fallback
+const CONF_RE = /^(XS|S|M|L|XL|XXL|\d+XL)$/i;
+const COMBINATION_CONF_RE = /^(XS|S|M|L|XL|XXL|\d+XL)-(XS|S|M|L|XL|XXL|\d+XL)$/i;
+const PANT_RE = /^W?\d{2,3}\/L?\d{2,3}$/i;
+
+function fallbackClassify(size: string): SizeGroup | null {
   const s = size.trim();
-  // Confectie: XS, S, M, L, XL, XXL, 3XL, etc.
-  if (/^(XS|S|M|L|XL|XXL|\d+XL)$/i.test(s)) return 'confectie';
-  // Broeksmaten: W32/L34, 32/34
-  if (/^W?\d{2}\/L?\d{2}$/i.test(s)) return 'broek';
-  // Numeriek: 2–3 cijfers (28–70 range)
+  if (CONF_RE.test(s) || COMBINATION_CONF_RE.test(s)) return 'confectie';
+  if (PANT_RE.test(s)) return 'broeksmaten';
   if (/^\d{2,3}$/.test(s)) {
     const n = parseInt(s, 10);
-    if (n >= 28 && n <= 70) return 'numeriek';
+    if (n >= 50 && n <= 176) return 'kindermaten';
+    if (n >= 28) return 'kledingmaten';
   }
-  return 'overig';
+  return null;
+}
+
+function resolveGroup(item: SizeItem): SizeGroup | null {
+  const mapped = CATEGORY_TO_GROUP[item.category];
+  if (mapped !== undefined) return mapped;
+  return fallbackClassify(item.value);
 }
 
 function sortConfectie(sizes: string[]): string[] {
@@ -38,71 +77,91 @@ function sortConfectie(sizes: string[]): string[] {
   });
 }
 
-function sortNumeriek(sizes: string[]): string[] {
+function sortKledingmaten(sizes: string[]): string[] {
   return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 }
 
-function sortBroek(sizes: string[]): string[] {
+function sortSchoenmaten(sizes: string[]): string[] {
+  return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+function sortBroeksmaten(sizes: string[]): string[] {
   return [...sizes].sort((a, b) => {
     const wa = parseInt(a.replace(/^W?(\d+).*/, '$1'), 10);
     const wb = parseInt(b.replace(/^W?(\d+).*/, '$1'), 10);
-    return wa - wb;
+    if (wa !== wb) return wa - wb;
+    const la = parseInt(a.replace(/.*\/L?(\d+)$/, '$1'), 10);
+    const lb = parseInt(b.replace(/.*\/L?(\d+)$/, '$1'), 10);
+    return la - lb;
   });
 }
 
-/**
- * Builds a grouped, sorted map of all unique size values from a set of models.
- * Groups with no values are returned as empty arrays.
- */
+function sortKindermaten(sizes: string[]): string[] {
+  return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+const SORT_FNS: Record<SizeGroup, (s: string[]) => string[]> = {
+  confectie:    sortConfectie,
+  kledingmaten: sortKledingmaten,
+  schoenmaten:  sortSchoenmaten,
+  broeksmaten:  sortBroeksmaten,
+  kindermaten:  sortKindermaten,
+};
+
 export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
   const grouped: Record<SizeGroup, Set<string>> = {
-    confectie: new Set(),
-    numeriek: new Set(),
-    broek: new Set(),
-    overig: new Set(),
+    confectie:    new Set(),
+    kledingmaten: new Set(),
+    schoenmaten:  new Set(),
+    broeksmaten:  new Set(),
+    kindermaten:  new Set(),
   };
 
   for (const model of models) {
-    for (const size of model.sizeSet ?? []) {
-      grouped[classifySizeGroup(size)].add(size);
+    const items = model.sizeItems ?? (model.sizeSet?.map(v => ({ value: v, category: 'UNKNOWN' as const })) ?? []);
+    for (const item of items) {
+      const group = resolveGroup(item);
+      if (group) grouped[group].add(item.value);
     }
   }
 
   return {
-    confectie: sortConfectie(Array.from(grouped.confectie)),
-    numeriek: sortNumeriek(Array.from(grouped.numeriek)),
-    broek: sortBroek(Array.from(grouped.broek)),
-    overig: Array.from(grouped.overig).sort(),
+    confectie:    SORT_FNS.confectie(Array.from(grouped.confectie)),
+    kledingmaten: SORT_FNS.kledingmaten(Array.from(grouped.kledingmaten)),
+    schoenmaten:  SORT_FNS.schoenmaten(Array.from(grouped.schoenmaten)),
+    broeksmaten:  SORT_FNS.broeksmaten(Array.from(grouped.broeksmaten)),
+    kindermaten:  SORT_FNS.kindermaten(Array.from(grouped.kindermaten)),
   };
 }
 
-/**
- * Returns true if the model has at least one variant with a size in `selected`.
- */
+// Expandeer combinatiematen: "L-XL" → ["L-XL", "L", "XL"]
+export function expandSize(value: string): string[] {
+  const match = value.match(/^(.+)-(.+)$/);
+  if (match && COMBINATION_CONF_RE.test(value)) {
+    return [value, match[1].toUpperCase(), match[2].toUpperCase()];
+  }
+  return [value];
+}
+
 export function modelMatchesSizeFilter(
   model: ModelSummaryLike,
   selected: Set<string>,
 ): boolean {
   if (selected.size === 0) return true;
-  for (const size of model.sizeSet ?? []) {
-    if (selected.has(size)) return true;
+  const items = model.sizeItems ?? (model.sizeSet?.map(v => ({ value: v, category: 'UNKNOWN' as const })) ?? []);
+  for (const item of items) {
+    for (const expanded of expandSize(item.value)) {
+      if (selected.has(expanded)) return true;
+    }
   }
   return false;
 }
 
-/**
- * Parse URL sizes param: comma-separated sizeDisplay values.
- * "M,XL,W32/L34" → Set(['M', 'XL', 'W32/L34'])
- */
 export function parseSizeParam(param: string): Set<string> {
   if (!param) return new Set();
   return new Set(param.split(',').filter(Boolean).map(decodeURIComponent));
 }
 
-/**
- * Serialize selected sizes to URL param.
- * Set(['M', 'XL']) → "M,XL"
- */
 export function serializeSizeParam(selected: Set<string>): string {
   return Array.from(selected).map(encodeURIComponent).join(',');
 }
