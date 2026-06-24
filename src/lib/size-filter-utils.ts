@@ -34,7 +34,6 @@ const CATEGORY_TO_GROUP: Record<string, SizeGroup | null> = {
   NUM:     'kledingmaten',
   KIDS:    'kindermaten',
   UNI:     null,
-  UNKNOWN: null,  // UNKNOWN valt terug op regex hieronder
 };
 
 // Sorteervolgorde voor confectie
