@@ -69,6 +69,7 @@ interface ShowcaseVariant {
   ean: string;
   sizeRaw: string;
   sizeDisplay: string | null;
+  sizeCategory: string | null;   // SizeCategory code (CONF/SHOE/PANT/NUM/KIDS) of null
   priceCents: number | null;
 }
 
@@ -161,6 +162,7 @@ interface FrontendColorGroup {
     ean: string;
     sizeRaw: string;
     sizeDisplay: string;
+    sizeCategory: string | null;
     priceCents: number;
   }[];
   images: {
@@ -216,6 +218,11 @@ interface SyncManifest {
   totalImages: number;
 }
 
+interface SizeItem {
+  value: string;
+  category: 'CONF' | 'SHOE' | 'PANT' | 'NUM' | 'KIDS' | 'UNKNOWN';
+}
+
 interface ModelSummary {
   slug: string;
   brandSlug: string;
@@ -239,6 +246,8 @@ interface ModelSummary {
   }>;
   /** All unique sizeDisplay values across all variants. Used for client-side size filtering. */
   sizeSet?: string[];
+  /** Unieke maten per model met SizeCategory code. UNKNOWN = nog niet verrijkt. */
+  sizeItems?: SizeItem[];
 }
 
 // MiniSearch document
@@ -496,6 +505,7 @@ function transformModel(model: ShowcaseModel): FrontendModel {
       ean: v.ean,
       sizeRaw: v.sizeRaw,
       sizeDisplay: v.sizeDisplay ?? v.sizeRaw,
+      sizeCategory: v.sizeCategory ?? null,
       priceCents: v.priceCents ?? 0,
     })),
     images: cg.images.map((img) => {
@@ -858,13 +868,22 @@ async function writeDataFiles(
       if (cg.tertiaryCode) allColorCodes.add(cg.tertiaryCode);
     }
 
-    // Collect all unique sizeDisplay values for size filter
-    const allSizes = new Set<string>();
+    // Collect sizeItems (value + category) — dedupliceer op value, houd eerste category
+    const seenSizeValues = new Set<string>();
+    const sizeItems: SizeItem[] = [];
     for (const cg of m.colorGroups) {
       for (const v of cg.variants) {
-        if (v.sizeDisplay) allSizes.add(v.sizeDisplay);
+        if (v.sizeDisplay && !seenSizeValues.has(v.sizeDisplay)) {
+          seenSizeValues.add(v.sizeDisplay);
+          sizeItems.push({
+            value: v.sizeDisplay,
+            category: (v.sizeCategory as SizeItem['category']) ?? 'UNKNOWN',
+          });
+        }
       }
     }
+    // Backwards-compat: sizeSet = alle waarden (voor consumers die nog niet op sizeItems zijn)
+    const allSizes = new Set(sizeItems.map(i => i.value));
 
     const totalColorGroups = m.colorGroups.length;
     const COLOR_GROUPS_CAP = 12;
@@ -898,6 +917,7 @@ async function writeDataFiles(
       // Complete set of color codes for accurate filter matching (uncapped)
       colorCodeSet: allColorCodes.size > 0 ? Array.from(allColorCodes) : undefined,
       sizeSet: allSizes.size > 0 ? Array.from(allSizes) : undefined,
+      sizeItems: sizeItems.length > 0 ? sizeItems : undefined,
     };
   });
   if (cappedModelCount > 0) {

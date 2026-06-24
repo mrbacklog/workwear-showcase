@@ -25,6 +25,11 @@ export interface ModelSummaryColorGroup {
   tertiaryCode?: string | null;
 }
 
+export interface SizeItem {
+  value: string;
+  category: 'CONF' | 'SHOE' | 'PANT' | 'NUM' | 'KIDS' | 'UNKNOWN';
+}
+
 export interface ModelSummary {
   slug: string;
   brandSlug: string;
@@ -41,8 +46,10 @@ export interface ModelSummary {
   colorGroups: ModelSummaryColorGroup[];
   /** All unique color codes across ALL colorGroups (uncapped). Used for filter accuracy. */
   colorCodeSet?: string[];
-  /** All unique sizeDisplay values across all variants. Used for client-side size filtering. */
+  /** @deprecated gebruik sizeItems voor groepering — sizeSet blijft voor backwards-compat */
   sizeSet?: string[];
+  /** Unieke maten per model met SizeCategory code. UNKNOWN = nog niet verrijkt (fallback). */
+  sizeItems?: SizeItem[];
 }
 
 export interface UseModelSummariesReturn {
