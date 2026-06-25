@@ -5,9 +5,11 @@ import { ColorFilter } from '@/components/search/ColorFilter';
 import { BrandFilter } from '@/components/search/BrandFilter';
 import { SpecialColorFilter } from '@/components/search/SpecialColorFilter';
 import { SizeFilter } from '@/components/search/SizeFilter';
+import GenderFilter from '@/components/search/GenderFilter';
 import type { ColorInfo } from '@/components/search/ColorFilter';
 import type { BrandInfo } from '@/hooks/useModelCards';
 import type { SizeGroupMap } from '@/lib/size-filter-utils';
+import type { GenderInfo } from '@/components/search/GenderFilter';
 
 interface FilterBottomSheetProps {
   isOpen: boolean;
@@ -27,6 +29,10 @@ interface FilterBottomSheetProps {
   fluorescentCount: number;
   onToggleHiVis: () => void;
   onToggleFluorescent: () => void;
+  // Genders
+  genders: GenderInfo[];
+  selectedGenders: Set<string>;
+  onGenderToggle: (code: string) => void;
   // Sizes
   availableSizes: SizeGroupMap;
   selectedSizes: Set<string>;
@@ -50,6 +56,9 @@ export function FilterBottomSheet({
   fluorescentCount,
   onToggleHiVis,
   onToggleFluorescent,
+  genders,
+  selectedGenders,
+  onGenderToggle,
   availableSizes,
   selectedSizes,
   onSizeChange,
@@ -148,6 +157,13 @@ export function FilterBottomSheet({
             brands={brands}
             selectedSlugs={selectedBrands}
             onToggle={onBrandToggle}
+          />
+
+          {/* Geslacht */}
+          <GenderFilter
+            genders={genders}
+            selected={selectedGenders}
+            onToggle={onGenderToggle}
           />
 
           <hr className="border-gray-200" />

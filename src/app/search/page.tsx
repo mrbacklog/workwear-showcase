@@ -915,6 +915,9 @@ function SearchPageContent() {
         availableSizes={sizesForFilter}
         selectedSizes={selectedSizes}
         onSizeChange={handleSizeToggle}
+        genders={gendersForFilter}
+        selectedGenders={selectedGenders}
+        onGenderToggle={handleGenderToggle}
       />
     </>
   );
