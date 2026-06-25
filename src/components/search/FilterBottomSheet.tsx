@@ -5,7 +5,7 @@ import { ColorFilter } from '@/components/search/ColorFilter';
 import { BrandFilter } from '@/components/search/BrandFilter';
 import { SpecialColorFilter } from '@/components/search/SpecialColorFilter';
 import { SizeFilter } from '@/components/search/SizeFilter';
-import GenderFilter from '@/components/search/GenderFilter';
+import { GenderFilter } from '@/components/search/GenderFilter';
 import type { ColorInfo } from '@/components/search/ColorFilter';
 import type { BrandInfo } from '@/hooks/useModelCards';
 import type { SizeGroupMap } from '@/lib/size-filter-utils';

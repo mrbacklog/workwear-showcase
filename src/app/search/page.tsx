@@ -15,7 +15,7 @@ import { ColorFilter, COLOR_PALETTE } from '@/components/search/ColorFilter';
 import { SpecialColorFilter } from '@/components/search/SpecialColorFilter';
 import { FilterBottomSheet } from '@/components/search/FilterBottomSheet';
 import { SizeFilter } from '@/components/search/SizeFilter';
-import GenderFilter, { type GenderInfo } from '@/components/search/GenderFilter';
+import { GenderFilter, type GenderInfo } from '@/components/search/GenderFilter';
 import {
   buildSizeGroups,
   modelMatchesSizeFilter,

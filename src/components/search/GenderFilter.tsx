@@ -20,7 +20,7 @@ const GENDER_LABELS: Record<string, string> = {
   junior: 'Junior',
 }
 
-export default function GenderFilter({ genders, selected, onToggle }: GenderFilterProps) {
+export function GenderFilter({ genders, selected, onToggle }: GenderFilterProps) {
   if (genders.length === 0) return null
 
   const sorted = [...genders].sort(
