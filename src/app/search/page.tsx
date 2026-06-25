@@ -56,6 +56,8 @@ const SkeletonGrid = memo(function SkeletonGrid() {
   );
 });
 
+const GENDER_CHIP_LABELS: Record<string, string> = { male: 'Man', female: 'Vrouw', unisex: 'Unisex', junior: 'Junior' };
+
 // ---------------------------------------------------------------------------
 // Search Page Content (uses useSearchParams, must be inside Suspense)
 // ---------------------------------------------------------------------------
@@ -201,7 +203,7 @@ function SearchPageContent() {
   const genderFilteredModels = useMemo(() => {
     if (selectedGenders.size === 0) return sizeFilteredModels;
     return sizeFilteredModels.filter(
-      (m) => m.gender != null && selectedGenders.has(m.gender)
+      (m) => m.gender == null || selectedGenders.has(m.gender)
     );
   }, [sizeFilteredModels, selectedGenders]);
 
@@ -740,7 +742,7 @@ function SearchPageContent() {
                     key={code}
                     className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800"
                   >
-                    {({'male':'Man','female':'Vrouw','unisex':'Unisex','junior':'Junior'} as Record<string, string>)[code] ?? code}
+                    {GENDER_CHIP_LABELS[code] ?? code}
                     <button
                       type="button"
                       onClick={() => handleGenderToggle(code)}
