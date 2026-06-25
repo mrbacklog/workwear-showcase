@@ -2,7 +2,7 @@
 
 import type { SizeItem } from '@/types/summary';
 
-export type SizeGroup = 'confectie' | 'kledingmaten' | 'schoenmaten' | 'broeksmaten' | 'kindermaten';
+export type SizeGroup = 'confectie' | 'kledingmaten' | 'schoenmaten' | 'broeksmaten' | 'kindermaten' | 'handschoenmaten' | 'hoofdmaten' | 'riemmaten';
 
 export type SizeGroupMap = Record<SizeGroup, string[]>;
 
@@ -17,14 +17,20 @@ export const GROUP_ORDER: SizeGroup[] = [
   'schoenmaten',
   'broeksmaten',
   'kindermaten',
+  'handschoenmaten',
+  'hoofdmaten',
+  'riemmaten',
 ];
 
 export const GROUP_LABELS: Record<SizeGroup, string> = {
-  confectie:    'Confectie',
-  kledingmaten: 'Kledingmaten',
-  schoenmaten:  'Schoenmaten',
-  broeksmaten:  'Broeksmaten',
-  kindermaten:  'Kindermaten',
+  confectie:       'Confectie',
+  kledingmaten:    'Kledingmaten',
+  schoenmaten:     'Schoenmaten',
+  broeksmaten:     'Broeksmaten',
+  kindermaten:     'Kindermaten',
+  handschoenmaten: 'Handschoenmaten',
+  hoofdmaten:      'Hoofdmaten',
+  riemmaten:       'Riemmaten',
 };
 
 const CATEGORY_TO_GROUP: Record<string, SizeGroup | null> = {
@@ -34,6 +40,9 @@ const CATEGORY_TO_GROUP: Record<string, SizeGroup | null> = {
   NUM:     'kledingmaten',
   KIDS:    'kindermaten',
   UNI:     null,
+  GLOVE:   'handschoenmaten',
+  HEAD:    'hoofdmaten',
+  BELT:    'riemmaten',
 };
 
 // Sorteervolgorde voor confectie
@@ -99,21 +108,31 @@ function sortKindermaten(sizes: string[]): string[] {
   return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 }
 
+function sortNumeric(sizes: string[]): string[] {
+  return [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b));
+}
+
 const SORT_FNS: Record<SizeGroup, (s: string[]) => string[]> = {
-  confectie:    sortConfectie,
-  kledingmaten: sortKledingmaten,
-  schoenmaten:  sortSchoenmaten,
-  broeksmaten:  sortBroeksmaten,
-  kindermaten:  sortKindermaten,
+  confectie:       sortConfectie,
+  kledingmaten:    sortKledingmaten,
+  schoenmaten:     sortSchoenmaten,
+  broeksmaten:     sortBroeksmaten,
+  kindermaten:     sortKindermaten,
+  handschoenmaten: sortNumeric,
+  hoofdmaten:      sortNumeric,
+  riemmaten:       sortNumeric,
 };
 
 export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
   const grouped: Record<SizeGroup, Set<string>> = {
-    confectie:    new Set(),
-    kledingmaten: new Set(),
-    schoenmaten:  new Set(),
-    broeksmaten:  new Set(),
-    kindermaten:  new Set(),
+    confectie:       new Set(),
+    kledingmaten:    new Set(),
+    schoenmaten:     new Set(),
+    broeksmaten:     new Set(),
+    kindermaten:     new Set(),
+    handschoenmaten: new Set(),
+    hoofdmaten:      new Set(),
+    riemmaten:       new Set(),
   };
 
   for (const model of models) {
@@ -125,11 +144,14 @@ export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
   }
 
   return {
-    confectie:    SORT_FNS.confectie(Array.from(grouped.confectie)),
-    kledingmaten: SORT_FNS.kledingmaten(Array.from(grouped.kledingmaten)),
-    schoenmaten:  SORT_FNS.schoenmaten(Array.from(grouped.schoenmaten)),
-    broeksmaten:  SORT_FNS.broeksmaten(Array.from(grouped.broeksmaten)),
-    kindermaten:  SORT_FNS.kindermaten(Array.from(grouped.kindermaten)),
+    confectie:       SORT_FNS.confectie(Array.from(grouped.confectie)),
+    kledingmaten:    SORT_FNS.kledingmaten(Array.from(grouped.kledingmaten)),
+    schoenmaten:     SORT_FNS.schoenmaten(Array.from(grouped.schoenmaten)),
+    broeksmaten:     SORT_FNS.broeksmaten(Array.from(grouped.broeksmaten)),
+    kindermaten:     SORT_FNS.kindermaten(Array.from(grouped.kindermaten)),
+    handschoenmaten: SORT_FNS.handschoenmaten(Array.from(grouped.handschoenmaten)),
+    hoofdmaten:      SORT_FNS.hoofdmaten(Array.from(grouped.hoofdmaten)),
+    riemmaten:       SORT_FNS.riemmaten(Array.from(grouped.riemmaten)),
   };
 }
 
