@@ -15,6 +15,7 @@ import { ColorFilter, COLOR_PALETTE } from '@/components/search/ColorFilter';
 import { SpecialColorFilter } from '@/components/search/SpecialColorFilter';
 import { FilterBottomSheet } from '@/components/search/FilterBottomSheet';
 import { SizeFilter } from '@/components/search/SizeFilter';
+import { GenderFilter, type GenderInfo } from '@/components/search/GenderFilter';
 import {
   buildSizeGroups,
   modelMatchesSizeFilter,
@@ -55,6 +56,8 @@ const SkeletonGrid = memo(function SkeletonGrid() {
   );
 });
 
+const GENDER_CHIP_LABELS: Record<string, string> = { male: 'Man', female: 'Vrouw', unisex: 'Unisex', junior: 'Junior' };
+
 // ---------------------------------------------------------------------------
 // Search Page Content (uses useSearchParams, must be inside Suspense)
 // ---------------------------------------------------------------------------
@@ -91,6 +94,12 @@ function SearchPageContent() {
   // Hi-vis / Fluorescent toggles
   const [hiVisActive, setHiVisActive] = useState(() => searchParams.get('hivis') === '1');
   const [fluorescentActive, setFluorescentActive] = useState(() => searchParams.get('fluorescent') === '1');
+
+  // Gender filter
+  const genderParam = searchParams.get('gender') ?? '';
+  const [selectedGenders, setSelectedGenders] = useState<Set<string>>(
+    () => new Set(genderParam ? genderParam.split(',').filter(Boolean) : [])
+  );
 
   // Size filter
   const sizesParam = searchParams.get('sizes') ?? '';
@@ -180,15 +189,38 @@ function SearchPageContent() {
     return result;
   }, [colorFilteredModels, hiVisActive, fluorescentActive]);
 
+  // Gender-filtered models (before size filter)
+  const genderFilteredModels = useMemo(() => {
+    if (selectedGenders.size === 0) return specialFilteredModels;
+    return specialFilteredModels.filter(
+      (m) => m.gender == null || selectedGenders.has(m.gender)
+    );
+  }, [specialFilteredModels, selectedGenders]);
+
+  // Contextual gender counts: based on models pre-gender (specialFilteredModels)
+  const gendersForFilter = useMemo((): GenderInfo[] => {
+    const counts: Record<string, number> = {};
+    for (const m of specialFilteredModels) {
+      if (m.gender) {
+        counts[m.gender] = (counts[m.gender] ?? 0) + 1;
+      }
+    }
+    return Object.entries(counts).map(([code, count]) => ({
+      code,
+      label: GENDER_CHIP_LABELS[code] ?? code,
+      modelCount: count,
+    }));
+  }, [specialFilteredModels]);
+
   // Size-filtered models (OR: model zichtbaar als minstens één variant de maat heeft)
   const sizeFilteredModels = useMemo(() => {
-    if (selectedSizes.size === 0) return specialFilteredModels;
-    return specialFilteredModels.filter((m) => modelMatchesSizeFilter(m, selectedSizes));
-  }, [specialFilteredModels, selectedSizes]);
+    if (selectedSizes.size === 0) return genderFilteredModels;
+    return genderFilteredModels.filter((m) => modelMatchesSizeFilter(m, selectedSizes));
+  }, [genderFilteredModels, selectedSizes]);
 
   const sizesForFilter = useMemo((): SizeGroupMap => {
-    return buildSizeGroups(specialFilteredModels);
-  }, [specialFilteredModels]);
+    return buildSizeGroups(genderFilteredModels);
+  }, [genderFilteredModels]);
 
   // ---------------------------------------------------------------------------
   // Leaf counts: how many models belong directly to each category code
@@ -266,14 +298,20 @@ function SearchPageContent() {
         return model && modelMatchesSizeFilter(model, selectedSizes);
       });
     }
+    if (selectedGenders.size > 0) {
+      filtered = filtered.filter((r) => {
+        const model = getBySlug(r.slug);
+        return model && (model.gender == null || selectedGenders.has(model.gender));
+      });
+    }
     return filtered;
-  }, [results, isUnlocked, validCodesSet, selectedBrands, colorFilterGroups, hiVisActive, fluorescentActive, selectedSizes, getBySlug]);
+  }, [results, isUnlocked, validCodesSet, selectedBrands, colorFilterGroups, hiVisActive, fluorescentActive, selectedSizes, selectedGenders, getBySlug]);
 
   // Browse mode: no query but category selected → show all models in category
   const browseModels = useMemo(() => {
     if (!selectedCategory || !validCodesSet) return [];
-    return sizeFilteredModels.filter((m) => validCodesSet.has(m.categoryCode));
-  }, [selectedCategory, validCodesSet, sizeFilteredModels]);
+    return genderFilteredModels.filter((m) => validCodesSet.has(m.categoryCode));
+  }, [selectedCategory, validCodesSet, genderFilteredModels]);
 
   // Contextual color counts: based on brand + category selection (not color selection)
   // Now counts across primary + secondary + tertiary
@@ -449,6 +487,17 @@ function SearchPageContent() {
     syncUrl({ fluorescent: next ? '1' : null });
   }, [fluorescentActive, syncUrl]);
 
+  const handleGenderToggle = useCallback(
+    (code: string) => {
+      const next = new Set(selectedGenders);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      setSelectedGenders(next);
+      syncUrl({ gender: next.size > 0 ? [...next].sort().join(',') : null });
+    },
+    [selectedGenders, syncUrl],
+  );
+
   const handleSizeToggle = useCallback(
     (sizes: Set<string>) => {
       setSelectedSizes(sizes);
@@ -468,6 +517,7 @@ function SearchPageContent() {
     selectedColors.size +
     selectedBrands.size +
     selectedSizes.size +
+    selectedGenders.size +
     (hiVisActive ? 1 : 0) +
     (fluorescentActive ? 1 : 0);
 
@@ -519,6 +569,14 @@ function SearchPageContent() {
 
               <hr className="my-4 border-gray-200" />
 
+              <GenderFilter
+                genders={gendersForFilter}
+                selected={selectedGenders}
+                onToggle={handleGenderToggle}
+              />
+
+              <hr className="my-4 border-gray-200" />
+
               <SizeFilter
                 available={sizesForFilter}
                 selected={selectedSizes}
@@ -530,7 +588,7 @@ function SearchPageContent() {
           {/* Main content */}
           <div className="flex-1">
             {/* Active filter chips */}
-            {(selectedCategoryNode || colorFilterGroups.length > 0 || selectedBrands.size > 0 || selectedSizes.size > 0 || hiVisActive || fluorescentActive) && (
+            {(selectedCategoryNode || colorFilterGroups.length > 0 || selectedBrands.size > 0 || selectedSizes.size > 0 || selectedGenders.size > 0 || hiVisActive || fluorescentActive) && (
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {selectedCategoryNode && (
                   <>
@@ -678,6 +736,24 @@ function SearchPageContent() {
                   );
                 })}
 
+                {/* Gender chips */}
+                {Array.from(selectedGenders).sort().map((code) => (
+                  <span
+                    key={code}
+                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800"
+                  >
+                    {GENDER_CHIP_LABELS[code] ?? code}
+                    <button
+                      type="button"
+                      onClick={() => handleGenderToggle(code)}
+                      className="ml-1 text-gray-400 hover:text-gray-600"
+                      aria-label={`Geslacht ${code} verwijderen`}
+                    >
+                      &#x2715;
+                    </button>
+                  </span>
+                ))}
+
                 {/* Size filter chips */}
                 {[...selectedSizes].map((size) => (
                   <span
@@ -785,13 +861,13 @@ function SearchPageContent() {
               <>
                 <div className="mb-6 flex items-center justify-between">
                   <p className="text-sm text-gray-500">
-                    {sizeFilteredModels.length}{' '}
-                    {sizeFilteredModels.length === 1 ? 'product' : 'producten'}
+                    {genderFilteredModels.length}{' '}
+                    {genderFilteredModels.length === 1 ? 'product' : 'producten'}
                   </p>
                   <ViewSwitcher mode={viewMode} onChange={handleViewChange} />
                 </div>
                 <VirtualGrid
-                  items={sizeFilteredModels}
+                  items={genderFilteredModels}
                   preferredColorCodes={selectedColors.size > 0 ? selectedColors : undefined}
                   colorFilterGroups={colorFilterGroups.length > 0 ? colorFilterGroups : undefined}
                   viewMode={viewMode}
@@ -839,6 +915,9 @@ function SearchPageContent() {
         availableSizes={sizesForFilter}
         selectedSizes={selectedSizes}
         onSizeChange={handleSizeToggle}
+        genders={gendersForFilter}
+        selectedGenders={selectedGenders}
+        onGenderToggle={handleGenderToggle}
       />
     </>
   );
