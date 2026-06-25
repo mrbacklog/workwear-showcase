@@ -217,7 +217,7 @@ function SearchPageContent() {
     }
     return Object.entries(counts).map(([code, count]) => ({
       code,
-      label: code,
+      label: GENDER_CHIP_LABELS[code] ?? code,
       modelCount: count,
     }));
   }, [sizeFilteredModels]);
@@ -301,7 +301,7 @@ function SearchPageContent() {
     if (selectedGenders.size > 0) {
       filtered = filtered.filter((r) => {
         const model = getBySlug(r.slug);
-        return model && model.gender != null && selectedGenders.has(model.gender);
+        return model && (model.gender == null || selectedGenders.has(model.gender));
       });
     }
     return filtered;
