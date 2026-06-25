@@ -50,6 +50,8 @@ export interface ModelSummary {
   sizeSet?: string[];
   /** Unieke maten per model met SizeCategory code. UNKNOWN = nog niet verrijkt (fallback). */
   sizeItems?: SizeItem[];
+  /** Gender code: 'male' | 'female' | 'unisex' | 'junior' | null */
+  gender?: string | null;
 }
 
 export interface UseModelSummariesReturn {
