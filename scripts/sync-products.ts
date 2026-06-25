@@ -1090,6 +1090,12 @@ function runBuild(): void {
 // ---------------------------------------------------------------------------
 
 function runDeploy(): void {
+  log('Running pre-deploy cleanup (removing RSC .txt payloads)...');
+  execSync('tsx scripts/pre-deploy-cleanup.ts', {
+    cwd: PROJECT_ROOT,
+    stdio: 'inherit',
+  });
+
   log('Deploying to Cloudflare Pages...');
   try {
     execSync('npx wrangler pages deploy out --project-name=workwear-showcase', {

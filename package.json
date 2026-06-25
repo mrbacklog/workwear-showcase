@@ -12,6 +12,7 @@
     "sync:build": "tsx scripts/sync-products.ts --build",
     "sync:dry-run": "tsx scripts/sync-products.ts --dry-run",
     "sync:deploy": "tsx scripts/sync-products.ts --build --deploy",
+    "deploy:pages": "tsx scripts/pre-deploy-cleanup.ts && npx wrangler pages deploy out --project-name=workwear-showcase --branch=main",
     "fixtures:load": "tsx scripts/load-fixtures.ts",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
