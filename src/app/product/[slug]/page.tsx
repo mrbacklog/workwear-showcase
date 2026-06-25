@@ -12,25 +12,16 @@ interface CategoryChunkEntry {
   subChunks?: string[];
 }
 
-export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> },
-): Promise<Metadata> {
-  const { slug } = await params;
-  return { alternates: { canonical: `/product/${slug}/` } };
-}
-
-export function generateStaticParams() {
+/** Build a slug → chunkFile map from the data directory at build time. */
+function buildSlugChunkMap(): Map<string, string> {
+  const map = new Map<string, string>();
   try {
     const dataDir = path.join(process.cwd(), 'public', 'data');
     const metaPath = path.join(dataDir, 'model-cards-meta.json');
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
 
-    // Resolve chunk filenames from either category-based or legacy format
     let chunkFiles: string[];
     if (typeof meta.chunks === 'object' && !Array.isArray(meta.chunks)) {
-      // Category format: { chunks: { "cat-key": { file, subChunks? } } }
-      // When subChunks is present the category was split for size limits;
-      // use those instead of the (typically only first) main file.
       chunkFiles = [];
       for (const entry of Object.values(meta.chunks as Record<string, CategoryChunkEntry>)) {
         if (entry.subChunks && entry.subChunks.length > 0) {
@@ -40,25 +31,57 @@ export function generateStaticParams() {
         }
       }
     } else {
-      // Legacy format: { chunks: 3 } → model-cards-0.json, model-cards-1.json, ...
       chunkFiles = Array.from({ length: meta.chunks as number }, (_, i) => `model-cards-${i}.json`);
     }
 
-    const allModels: ModelCard[] = [];
     for (const file of chunkFiles) {
       const chunkPath = path.join(dataDir, file);
       if (fs.existsSync(chunkPath)) {
         const chunk: ModelCard[] = JSON.parse(fs.readFileSync(chunkPath, 'utf-8'));
-        allModels.push(...chunk);
+        for (const model of chunk) {
+          map.set(model.slug, file);
+        }
       }
     }
-
-    return allModels.map((m) => ({ slug: m.slug }));
   } catch {
-    return [];
+    // build-time only — silently ignore
   }
+  return map;
 }
 
-export default function ProductPage() {
-  return <ProductClient />;
+// Build once at module load time (Next.js SSG evaluates this per page at build time)
+const slugChunkMap = buildSlugChunkMap();
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> },
+): Promise<Metadata> {
+  const { slug } = await params;
+  return { alternates: { canonical: `/product/${slug}/` } };
+}
+
+export function generateStaticParams() {
+  return Array.from(slugChunkMap.keys()).map((slug) => ({ slug }));
+}
+
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const chunkFile = slugChunkMap.get(slug) ?? null;
+
+  return (
+    <>
+      {chunkFile && (
+        <link
+          rel="preload"
+          as="fetch"
+          crossOrigin="anonymous"
+          href={`/data/${chunkFile}`}
+        />
+      )}
+      <ProductClient />
+    </>
+  );
 }
