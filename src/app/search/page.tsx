@@ -189,28 +189,18 @@ function SearchPageContent() {
     return result;
   }, [colorFilteredModels, hiVisActive, fluorescentActive]);
 
-  // Size-filtered models (OR: model zichtbaar als minstens één variant de maat heeft)
-  const sizeFilteredModels = useMemo(() => {
-    if (selectedSizes.size === 0) return specialFilteredModels;
-    return specialFilteredModels.filter((m) => modelMatchesSizeFilter(m, selectedSizes));
-  }, [specialFilteredModels, selectedSizes]);
-
-  const sizesForFilter = useMemo((): SizeGroupMap => {
-    return buildSizeGroups(specialFilteredModels);
-  }, [specialFilteredModels]);
-
-  // Gender-filtered models (after size filter)
+  // Gender-filtered models (before size filter)
   const genderFilteredModels = useMemo(() => {
-    if (selectedGenders.size === 0) return sizeFilteredModels;
-    return sizeFilteredModels.filter(
+    if (selectedGenders.size === 0) return specialFilteredModels;
+    return specialFilteredModels.filter(
       (m) => m.gender == null || selectedGenders.has(m.gender)
     );
-  }, [sizeFilteredModels, selectedGenders]);
+  }, [specialFilteredModels, selectedGenders]);
 
-  // Contextual gender counts: based on models pre-gender (sizeFilteredModels)
+  // Contextual gender counts: based on models pre-gender (specialFilteredModels)
   const gendersForFilter = useMemo((): GenderInfo[] => {
     const counts: Record<string, number> = {};
-    for (const m of sizeFilteredModels) {
+    for (const m of specialFilteredModels) {
       if (m.gender) {
         counts[m.gender] = (counts[m.gender] ?? 0) + 1;
       }
@@ -220,7 +210,17 @@ function SearchPageContent() {
       label: GENDER_CHIP_LABELS[code] ?? code,
       modelCount: count,
     }));
-  }, [sizeFilteredModels]);
+  }, [specialFilteredModels]);
+
+  // Size-filtered models (OR: model zichtbaar als minstens één variant de maat heeft)
+  const sizeFilteredModels = useMemo(() => {
+    if (selectedSizes.size === 0) return genderFilteredModels;
+    return genderFilteredModels.filter((m) => modelMatchesSizeFilter(m, selectedSizes));
+  }, [genderFilteredModels, selectedSizes]);
+
+  const sizesForFilter = useMemo((): SizeGroupMap => {
+    return buildSizeGroups(genderFilteredModels);
+  }, [genderFilteredModels]);
 
   // ---------------------------------------------------------------------------
   // Leaf counts: how many models belong directly to each category code
