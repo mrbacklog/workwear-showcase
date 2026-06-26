@@ -265,6 +265,7 @@ interface SearchDocument {
   imagePath: string;
   minPrice: number;
   publicationStatus: string;
+  gender: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -588,6 +589,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
       'imagePath',
       'minPrice',
       'publicationStatus',
+      'gender',
     ],
     searchOptions: {
       boost: {
@@ -655,6 +657,7 @@ function buildSearchIndex(models: FrontendModel[]): string {
       imagePath,
       minPrice,
       publicationStatus: model.publicationStatus,
+      gender: model.gender ?? null,
     };
   });
 
