@@ -100,6 +100,19 @@ export function displayFromSizeKey(key: string): string {
   return idx >= 0 ? key.slice(idx + 1) : key;
 }
 
+// Mascot 4-cijferige schoencodes → EU-maat:
+//   830–850  (prefix 8): EU = n − 800   (bijv. 835 → EU 35)
+//   1030–1060 (prefix 10): EU = n − 1000  (bijv. 1036 → EU 36)
+//   1130–1165 (prefix 11): EU = n − 1100  (bijv. 1139 → EU 39)
+export function mascotToEuSize(value: string): string | null {
+  if (!/^[01]\d{3}$/.test(value)) return null;
+  const n = parseInt(value, 10);
+  if (n >= 830 && n <= 850) return String(n - 800);
+  if (n >= 1030 && n <= 1060) return String(n - 1000);
+  if (n >= 1130 && n <= 1165) return String(n - 1100);
+  return null;
+}
+
 export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
   const grouped: Record<SizeGroup, Set<string>> = {
     confectie:       new Set(),
@@ -117,10 +130,12 @@ export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
     for (const item of items) {
       const group = resolveGroup(item);
       if (!group) continue;
-      // Exclude 4-digit Mascot article codes from schoenmaten (e.g. "0835", "1036")
-      // Half-sizes like "37.5" are kept (contain a dot)
-      if (group === 'schoenmaten' && item.value.length > 2 && !item.value.includes('.')) continue;
-      grouped[group].add(`${item.category}:${item.value}`);
+      // Mascot 4-cijferige codes naar EU-maat normaliseren voor de filter:
+      // "1036" → "36", "0835" → "35", "1139" → "39"
+      const filterValue = group === 'schoenmaten'
+        ? (mascotToEuSize(item.value) ?? item.value)
+        : item.value;
+      grouped[group].add(`${item.category}:${filterValue}`);
     }
   }
 
@@ -168,6 +183,11 @@ export function modelMatchesSizeFilter(
   const items = model.sizeItems ?? (model.sizeSet?.map(v => ({ value: v, category: 'UNKNOWN' as const })) ?? []);
   for (const item of items) {
     if (expandedSelected.has(`${item.category}:${item.value}`)) return true;
+    // Mascot SHOE codes: filter op EU-maat (bijv. "SHOE:36" matcht variant met "SHOE:1036")
+    if (item.category === 'SHOE') {
+      const eu = mascotToEuSize(item.value);
+      if (eu && expandedSelected.has(`SHOE:${eu}`)) return true;
+    }
   }
   return false;
 }
