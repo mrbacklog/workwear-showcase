@@ -1,0 +1,340 @@
+<h2>Model-Detail Pagina — 3 Ontwerpen</h2>
+<p class="subtitle">Klik op het ontwerp dat je het meest aanspreekt. Alle ontwerpen: ColorSelector & VariantInfoTable verwijderd, matrix enhanced, afbeelding kleiner.</p>
+
+<div class="cards">
+
+  <!-- Design A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f9fafb;">
+      <div style="display:grid;grid-template-columns:35% 1fr;gap:16px;font-size:11px;color:#374151;">
+        <!-- Left: Gallery smaller -->
+        <div>
+          <div style="background:#e5e7eb;border-radius:8px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;">
+            <span style="color:#9ca3af;font-size:10px;">Product Image<br>(35% breedte)</span>
+            <div style="position:absolute;bottom:4px;right:4px;background:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:8px;">🔍</div>
+          </div>
+          <div style="display:flex;gap:3px;margin-top:6px;">
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:2px solid #111827;"></div>
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+          </div>
+        </div>
+        <!-- Right: Details -->
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:9px;color:#9ca3af;">Werkkleding > Broeken > Werkbroeken</div>
+          <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">HAVEP</div>
+          <div style="font-weight:700;font-size:14px;color:#111827;">Attitude Werkbroek <span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:1px 5px;border-radius:3px;vertical-align:middle;">Kern</span></div>
+          <div style="font-weight:600;font-size:12px;color:#111827;">€ 89,95</div>
+
+          <!-- Specs badges -->
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;">
+            <span style="background:#dbeafe;color:#1e40af;font-size:8px;padding:2px 6px;border-radius:10px;">65% Polyester / 35% Katoen</span>
+            <span style="background:#fef3c7;color:#92400e;font-size:8px;padding:2px 6px;border-radius:10px;">EN ISO 20471</span>
+            <span style="background:#f3e8ff;color:#6b21a8;font-size:8px;padding:2px 6px;border-radius:10px;">Heren</span>
+            <span style="background:#ecfdf5;color:#065f46;font-size:8px;padding:2px 6px;border-radius:10px;">300 g/m²</span>
+          </div>
+
+          <!-- Enhanced Matrix -->
+          <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-top:4px;">
+            <table style="width:100%;border-collapse:collapse;font-size:8px;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:3px 6px;text-align:left;font-weight:500;color:#6b7280;">Kleur</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">S</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">M</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">L</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">XL</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">XXL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f3f4f6;font-weight:500;">
+                  <td style="padding:3px 6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#1e3a5f;vertical-align:middle;margin-right:3px;border:1.5px solid #111827;"></span> Navy</td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                  <td style="padding:3px;text-align:center;position:relative;">
+                    <span style="background:#111827;color:white;border-radius:3px;padding:1px 4px;font-size:7px;">✓</span>
+                  </td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#d1d5db;">—</td>
+                </tr>
+                <tr>
+                  <td style="padding:3px 6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#111827;vertical-align:middle;margin-right:3px;border:1px solid #d1d5db;"></span> Zwart</td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#111827;">✓</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="font-size:7px;color:#9ca3af;margin-top:1px;">Klik op ✓ voor EAN + prijs — kleur-rij klikt = galerij wisselt</div>
+
+          <!-- Popover example -->
+          <div style="background:#111827;color:white;border-radius:6px;padding:6px 8px;font-size:8px;display:inline-flex;align-items:center;gap:8px;width:fit-content;">
+            <span>Navy — M</span>
+            <span style="opacity:0.7;">€ 89,95</span>
+            <span style="font-family:monospace;">8712345678901</span>
+            <span style="background:#374151;border-radius:3px;padding:1px 3px;font-size:7px;cursor:pointer;">📋</span>
+          </div>
+          <div style="font-size:7px;color:#6b7280;margin-top:-4px;">↑ Voorbeeld popover bij klik op cel</div>
+
+          <!-- Description -->
+          <div style="border-top:1px solid #e5e7eb;padding-top:6px;margin-top:4px;">
+            <div style="font-weight:500;font-size:9px;margin-bottom:3px;">Productomschrijving</div>
+            <div style="font-size:8px;color:#6b7280;line-height:1.4;">Werkbroek met optimale pasvorm, kniestukken voor kniekussens, meerdere zakken...</div>
+          </div>
+
+          <!-- Specs dl -->
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:8px;">
+            <span style="color:#6b7280;">Artikelnr</span><span style="font-weight:500;">80229</span>
+            <span style="color:#6b7280;">Wasinstructies</span><span style="font-weight:500;">60°C wasbaar</span>
+            <span style="color:#6b7280;">Herkomst</span><span style="font-weight:500;">Bangladesh</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Badges + Compacte Specs</h3>
+      <p>Materiaal, normen, gender als <strong>gekleurde badges</strong> direct onder de prijs. Specs als compact grid onderaan. Alles in één flow.</p>
+    </div>
+  </div>
+
+  <!-- Design B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f9fafb;">
+      <div style="display:grid;grid-template-columns:35% 1fr;gap:16px;font-size:11px;color:#374151;">
+        <!-- Left: Gallery -->
+        <div>
+          <div style="background:#e5e7eb;border-radius:8px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;">
+            <span style="color:#9ca3af;font-size:10px;">Product Image<br>(35% breedte)</span>
+            <div style="position:absolute;bottom:4px;right:4px;background:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:8px;">🔍</div>
+          </div>
+          <div style="display:flex;gap:3px;margin-top:6px;">
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:2px solid #111827;"></div>
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+          </div>
+        </div>
+        <!-- Right: Details with tabs -->
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:9px;color:#9ca3af;">Werkkleding > Broeken > Werkbroeken</div>
+          <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">HAVEP</div>
+          <div style="font-weight:700;font-size:14px;color:#111827;">Attitude Werkbroek <span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:1px 5px;border-radius:3px;vertical-align:middle;">Kern</span></div>
+          <div style="font-weight:600;font-size:12px;color:#111827;">€ 89,95</div>
+
+          <!-- Tabs -->
+          <div style="display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-top:4px;">
+            <div style="padding:4px 10px;font-size:9px;font-weight:600;color:#111827;border-bottom:2px solid #111827;margin-bottom:-2px;">Varianten</div>
+            <div style="padding:4px 10px;font-size:9px;color:#6b7280;">Specificaties</div>
+            <div style="padding:4px 10px;font-size:9px;color:#6b7280;">Beschrijving</div>
+          </div>
+
+          <!-- Matrix (active tab) -->
+          <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;font-size:8px;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:3px 6px;text-align:left;font-weight:500;color:#6b7280;">Kleur</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">S</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">M</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">L</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">XL</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">XXL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f3f4f6;font-weight:500;">
+                  <td style="padding:3px 6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#1e3a5f;vertical-align:middle;margin-right:3px;border:1.5px solid #111827;"></span> Navy</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#d1d5db;">—</td>
+                </tr>
+                <tr>
+                  <td style="padding:3px 6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#111827;vertical-align:middle;margin-right:3px;border:1px solid #d1d5db;"></span> Zwart</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="font-size:7px;color:#9ca3af;">Klik op ✓ → popover met EAN (kopieerbaar) + prijs</div>
+
+          <!-- Specs tab preview (inactive, shown dimmed) -->
+          <div style="border:1px dashed #d1d5db;border-radius:6px;padding:6px;opacity:0.5;">
+            <div style="font-size:8px;color:#6b7280;">Tab "Specificaties" toont:</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;font-size:7px;margin-top:3px;">
+              <span>📐 Materiaal</span><span>🛡️ Veiligheidsnormen</span>
+              <span>👤 Geslacht</span><span>🧼 Wasinstructies</span>
+              <span>🌍 Herkomst</span><span>⚖️ Stofgewicht</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Tabs (Varianten / Specs / Beschrijving)</h3>
+      <p>Alle content in <strong>3 tabs</strong> op de rechterkolom. Matrix als default tab. Specs en beschrijving als aparte tabs — minder scrollen.</p>
+    </div>
+  </div>
+
+  <!-- Design C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f9fafb;">
+      <div style="display:grid;grid-template-columns:35% 1fr;gap:16px;font-size:11px;color:#374151;">
+        <!-- Left: Gallery -->
+        <div>
+          <div style="background:#e5e7eb;border-radius:8px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;">
+            <span style="color:#9ca3af;font-size:10px;">Product Image<br>(35% breedte)</span>
+            <div style="position:absolute;bottom:4px;right:4px;background:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:8px;">🔍</div>
+          </div>
+          <div style="display:flex;gap:3px;margin-top:6px;">
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:2px solid #111827;"></div>
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+            <div style="width:28px;height:28px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+          </div>
+        </div>
+        <!-- Right: Details -->
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:9px;color:#9ca3af;">Werkkleding > Broeken > Werkbroeken</div>
+          <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">HAVEP</div>
+          <div style="font-weight:700;font-size:14px;color:#111827;">Attitude Werkbroek <span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:1px 5px;border-radius:3px;vertical-align:middle;">Kern</span></div>
+          <div style="font-weight:600;font-size:12px;color:#111827;">€ 89,95</div>
+
+          <!-- Enhanced Matrix with inline expand -->
+          <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-top:4px;">
+            <table style="width:100%;border-collapse:collapse;font-size:8px;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:3px 6px;text-align:left;font-weight:500;color:#6b7280;">Kleur</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">S</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">M</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">L</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">XL</th>
+                  <th style="padding:3px;text-align:center;color:#6b7280;">XXL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f3f4f6;font-weight:500;">
+                  <td style="padding:3px 6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#1e3a5f;vertical-align:middle;margin-right:3px;border:1.5px solid #111827;"></span> Navy</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;color:#d1d5db;">—</td>
+                </tr>
+                <!-- Expanded row -->
+                <tr style="background:#eff6ff;">
+                  <td colspan="6" style="padding:6px 8px;">
+                    <div style="font-size:8px;font-weight:600;color:#1e40af;margin-bottom:4px;">Navy — Maten & EAN</div>
+                    <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:3px;">
+                      <div style="background:white;border:1px solid #bfdbfe;border-radius:4px;padding:3px 5px;">
+                        <div style="font-weight:600;font-size:8px;">S</div>
+                        <div style="font-size:7px;color:#6b7280;">€ 89,95</div>
+                        <div style="font-size:7px;font-family:monospace;color:#374151;display:flex;align-items:center;gap:2px;">
+                          8712345678901 <span style="color:#3b82f6;cursor:pointer;font-size:8px;">⧉</span>
+                        </div>
+                      </div>
+                      <div style="background:white;border:1px solid #bfdbfe;border-radius:4px;padding:3px 5px;">
+                        <div style="font-weight:600;font-size:8px;">M</div>
+                        <div style="font-size:7px;color:#6b7280;">€ 89,95</div>
+                        <div style="font-size:7px;font-family:monospace;color:#374151;display:flex;align-items:center;gap:2px;">
+                          8712345678902 <span style="color:#3b82f6;cursor:pointer;font-size:8px;">⧉</span>
+                        </div>
+                      </div>
+                      <div style="background:white;border:1px solid #bfdbfe;border-radius:4px;padding:3px 5px;">
+                        <div style="font-weight:600;font-size:8px;">L</div>
+                        <div style="font-size:7px;color:#6b7280;">€ 89,95</div>
+                        <div style="font-size:7px;font-family:monospace;color:#374151;display:flex;align-items:center;gap:2px;">
+                          8712345678903 <span style="color:#3b82f6;cursor:pointer;font-size:8px;">⧉</span>
+                        </div>
+                      </div>
+                      <div style="background:white;border:1px solid #bfdbfe;border-radius:4px;padding:3px 5px;">
+                        <div style="font-weight:600;font-size:8px;">XL</div>
+                        <div style="font-size:7px;color:#6b7280;">€ 89,95</div>
+                        <div style="font-size:7px;font-family:monospace;color:#374151;display:flex;align-items:center;gap:2px;">
+                          8712345678904 <span style="color:#3b82f6;cursor:pointer;font-size:8px;">⧉</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:3px 6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#111827;vertical-align:middle;margin-right:3px;border:1px solid #d1d5db;"></span> Zwart</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                  <td style="padding:3px;text-align:center;">✓</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="font-size:7px;color:#9ca3af;">Klik kleur-rij → expandeert met alle EANs + prijzen (inline)</div>
+
+          <!-- Specs as accordion section -->
+          <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-top:4px;">
+            <div style="padding:6px 8px;background:#f9fafb;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:9px;font-weight:600;">Productspecificaties</span>
+              <span style="font-size:8px;color:#6b7280;">▼</span>
+            </div>
+            <div style="padding:6px 8px;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:8px;">
+              <span style="color:#6b7280;">Materiaal</span><span style="font-weight:500;">65% Polyester / 35% Katoen</span>
+              <span style="color:#6b7280;">Stofgewicht</span><span style="font-weight:500;">300 g/m²</span>
+              <span style="color:#6b7280;">Normen</span><span style="font-weight:500;">EN ISO 20471</span>
+              <span style="color:#6b7280;">Geslacht</span><span style="font-weight:500;">Heren</span>
+              <span style="color:#6b7280;">Wassen</span><span style="font-weight:500;">60°C wasbaar</span>
+              <span style="color:#6b7280;">Herkomst</span><span style="font-weight:500;">Bangladesh</span>
+              <span style="color:#6b7280;">Artikelnr</span><span style="font-weight:500;">80229</span>
+              <span style="color:#6b7280;">Kleuren</span><span style="font-weight:500;">2</span>
+              <span style="color:#6b7280;">Varianten</span><span style="font-weight:500;">11</span>
+            </div>
+          </div>
+
+          <!-- Description accordion -->
+          <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+            <div style="padding:6px 8px;background:#f9fafb;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:9px;font-weight:600;">Productomschrijving</span>
+              <span style="font-size:8px;color:#6b7280;">▶</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Accordion + Inline Expand</h3>
+      <p>Kleur-rij <strong>expandeert inline</strong> met EAN-kaartjes (kopieerbaar). Specs en beschrijving als <strong>inklapbare secties</strong>. Meest compact.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Shared features -->
+<div class="section" style="margin-top:24px;">
+  <h3>Alle ontwerpen delen</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;">
+      <strong style="font-size:12px;color:#166534;">✓ Verwijderd</strong>
+      <ul style="font-size:11px;color:#374151;margin:4px 0 0 16px;padding:0;">
+        <li>ColorSelector (swatches apart)</li>
+        <li>VariantInfoTable (losse maattabel)</li>
+      </ul>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;">
+      <strong style="font-size:12px;color:#1e40af;">✚ Nieuw</strong>
+      <ul style="font-size:11px;color:#374151;margin:4px 0 0 16px;padding:0;">
+        <li>Kleinere afbeelding (35% vs 50%)</li>
+        <li>EAN + prijs interactief in matrix</li>
+        <li>EAN kopieerknop</li>
+        <li>Materiaal, normen, gender, wassen, herkomst, stofgewicht</li>
+        <li>Kleur-rij klik = galerij wisselt</li>
+      </ul>
+    </div>
+  </div>
+</div>

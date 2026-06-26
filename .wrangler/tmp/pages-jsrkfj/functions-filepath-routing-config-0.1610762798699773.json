@@ -1,0 +1,13 @@
+{
+  "routes": [
+    {
+      "routePath": "/product/:path*",
+      "mountPath": "/product",
+      "method": "GET",
+      "module": [
+        "product/[[path]].ts:onRequestGet"
+      ]
+    }
+  ],
+  "baseURL": "/"
+}

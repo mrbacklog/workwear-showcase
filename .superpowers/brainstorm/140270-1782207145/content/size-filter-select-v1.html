@@ -1,0 +1,272 @@
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+  .sf-panel {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 13px;
+    color: #111827;
+    width: 210px;
+    min-width: 210px;
+    cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .sf-panel:hover { border-color: #9ca3af; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .sf-panel.selected { border-color: #111827; box-shadow: 0 0 0 2px #111827; }
+
+  .sf-title {
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    margin-bottom: 10px;
+  }
+  .sf-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 12px 0 5px;
+  }
+  .sf-group-label:first-of-type { margin-top: 0; }
+  hr.sf-divider { border: none; border-top: 1px solid #f3f4f6; margin: 10px 0; }
+
+  /* Optie A: checkboxlijst */
+  .chk-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 13px;
+    color: #374151;
+  }
+  .chk-box {
+    width: 14px; height: 14px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 3px;
+    background: white;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chk-box.checked {
+    background: #111827;
+    border-color: #111827;
+  }
+  .chk-box.checked::after {
+    content: '';
+    display: block;
+    width: 7px; height: 5px;
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(-45deg) translateY(-1px);
+  }
+  .chk-count { margin-left: auto; color: #9ca3af; font-size: 11px; }
+
+  /* Optie B: stacked multi-select boxes */
+  .ms-box {
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 2px;
+  }
+  .ms-box-header {
+    background: #f9fafb;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .ms-options {
+    max-height: 90px;
+    overflow-y: auto;
+  }
+  .ms-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #374151;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .ms-option:last-child { border-bottom: none; }
+  .ms-option.active { background: #f0f0f0; font-weight: 500; }
+
+  /* Optie C: Accordion */
+  .acc-section { border-bottom: 1px solid #f3f4f6; }
+  .acc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    cursor: default;
+  }
+  .acc-header .badge {
+    background: #111827;
+    color: white;
+    border-radius: 9999px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .acc-chevron { color: #9ca3af; font-size: 10px; }
+  .acc-body { padding-bottom: 6px; }
+  .acc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 12px;
+    color: #374151;
+  }
+  .acc-row .chk-box { width: 13px; height: 13px; }
+
+  .cards-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .card-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-label { font-weight: 600; font-size: 13px; color: #374151; }
+  .card-desc { font-size: 11px; color: #6b7280; text-align: center; max-width: 200px; line-height: 1.5; }
+</style>
+
+<h2>Maatfilter — select-stijl varianten</h2>
+<p class="subtitle">Drie varianten met een meer "lijst"-aanpak. Klik op een variant om te selecteren.</p>
+
+<div class="cards-row">
+
+  <!-- OPTIE A: Checkboxlijst gegroepeerd -->
+  <div class="card-wrapper">
+    <div class="card-label">A — Checkboxlijst</div>
+    <div class="sf-panel option" data-choice="a" onclick="toggleSelect(this)">
+      <div class="sf-title">Maat</div>
+
+      <div class="sf-group-label">Confectie</div>
+      <div class="chk-row"><div class="chk-box"></div> XS <span class="chk-count">14</span></div>
+      <div class="chk-row"><div class="chk-box checked"></div> <strong>S</strong> <span class="chk-count">62</span></div>
+      <div class="chk-row"><div class="chk-box checked"></div> <strong>M</strong> <span class="chk-count">89</span></div>
+      <div class="chk-row"><div class="chk-box"></div> L <span class="chk-count">91</span></div>
+      <div class="chk-row"><div class="chk-box"></div> XL <span class="chk-count">88</span></div>
+      <div class="chk-row"><div class="chk-box"></div> XXL <span class="chk-count">74</span></div>
+      <div class="chk-row"><div class="chk-box"></div> 3XL <span class="chk-count">41</span></div>
+
+      <hr class="sf-divider">
+      <div class="sf-group-label">Numeriek (EU)</div>
+      <div class="chk-row"><div class="chk-box"></div> 44 <span class="chk-count">38</span></div>
+      <div class="chk-row"><div class="chk-box"></div> 46 <span class="chk-count">52</span></div>
+      <div class="chk-row"><div class="chk-box"></div> 48 <span class="chk-count">48</span></div>
+      <div class="chk-row"><div class="chk-box"></div> 50 <span class="chk-count">31</span></div>
+
+      <hr class="sf-divider">
+      <div class="sf-group-label">Broeksmaten</div>
+      <div class="chk-row"><div class="chk-box"></div> W30/L32 <span class="chk-count">19</span></div>
+      <div class="chk-row"><div class="chk-box"></div> W32/L32 <span class="chk-count">21</span></div>
+      <div class="chk-row"><div class="chk-box"></div> W34/L34 <span class="chk-count">18</span></div>
+    </div>
+    <div class="card-desc">Klassieke checkbox-aanpak. Aantal producten per maat als context. Scrolt bij lange lijsten.</div>
+  </div>
+
+  <!-- OPTIE B: Per-groep multi-select box -->
+  <div class="card-wrapper">
+    <div class="card-label">B — Per-groep selectbox</div>
+    <div class="sf-panel option" data-choice="b" onclick="toggleSelect(this)">
+      <div class="sf-title">Maat</div>
+
+      <div class="ms-box">
+        <div class="ms-box-header">Confectie</div>
+        <div class="ms-options">
+          <div class="ms-option"><div class="chk-box"></div> XS</div>
+          <div class="ms-option active"><div class="chk-box checked"></div> <strong>S</strong></div>
+          <div class="ms-option active"><div class="chk-box checked"></div> <strong>M</strong></div>
+          <div class="ms-option"><div class="chk-box"></div> L</div>
+          <div class="ms-option"><div class="chk-box"></div> XL</div>
+          <div class="ms-option"><div class="chk-box"></div> XXL</div>
+        </div>
+      </div>
+
+      <div class="ms-box">
+        <div class="ms-box-header">Numeriek (EU)</div>
+        <div class="ms-options">
+          <div class="ms-option"><div class="chk-box"></div> 44</div>
+          <div class="ms-option"><div class="chk-box"></div> 46</div>
+          <div class="ms-option"><div class="chk-box"></div> 48</div>
+          <div class="ms-option"><div class="chk-box"></div> 50</div>
+        </div>
+      </div>
+
+      <div class="ms-box">
+        <div class="ms-box-header">Broeksmaten</div>
+        <div class="ms-options">
+          <div class="ms-option"><div class="chk-box"></div> W30/L32</div>
+          <div class="ms-option"><div class="chk-box"></div> W32/L32</div>
+          <div class="ms-option"><div class="chk-box"></div> W34/L34</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-desc">Aparte kader per groep, scrolt per groep onafhankelijk. Geeft duidelijke visuele scheiding.</div>
+  </div>
+
+  <!-- OPTIE C: Accordion per groep -->
+  <div class="card-wrapper">
+    <div class="card-label">C — Accordion</div>
+    <div class="sf-panel option" data-choice="c" onclick="toggleSelect(this)">
+      <div class="sf-title">Maat</div>
+
+      <div class="acc-section">
+        <div class="acc-header">
+          Confectie <span class="badge">2</span>
+          <span class="acc-chevron">▲</span>
+        </div>
+        <div class="acc-body">
+          <div class="acc-row"><div class="chk-box"></div> XS</div>
+          <div class="acc-row"><div class="chk-box checked"></div> <strong>S</strong></div>
+          <div class="acc-row"><div class="chk-box checked"></div> <strong>M</strong></div>
+          <div class="acc-row"><div class="chk-box"></div> L</div>
+          <div class="acc-row"><div class="chk-box"></div> XL</div>
+          <div class="acc-row"><div class="chk-box"></div> XXL</div>
+          <div class="acc-row"><div class="chk-box"></div> 3XL</div>
+        </div>
+      </div>
+
+      <div class="acc-section">
+        <div class="acc-header">
+          Numeriek (EU)
+          <span class="acc-chevron">▼</span>
+        </div>
+        <!-- ingeklapt, alleen header zichtbaar -->
+      </div>
+
+      <div class="acc-section" style="border-bottom:none">
+        <div class="acc-header">
+          Broeksmaten
+          <span class="acc-chevron">▼</span>
+        </div>
+        <!-- ingeklapt -->
+      </div>
+    </div>
+    <div class="card-desc">Groepen in-/uitklapbaar. Actieve groep toont badge met aantal selecties. Compact bij veel groepen.</div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 20px; font-size: 12px;">
+  Donkere checkbox = geselecteerd · Getal rechts (A) = aantal modellen · Klik op een variant om te kiezen.
+</p>

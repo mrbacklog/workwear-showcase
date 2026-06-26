@@ -1,0 +1,329 @@
+<h2>Model-Detail — Definitief Ontwerp</h2>
+<p class="subtitle">Specs onder afbeelding, beschrijving inklapbaar rechts, prominente matrix, "Beheer" dropdown. Alles in 1 scherm.</p>
+
+<!-- Full desktop mockup -->
+<div class="mockup">
+  <div class="mockup-header">Desktop — Unlocked (na PIN via header)</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;">
+
+    <!-- Back link -->
+    <div style="padding:12px 20px 0 20px;">
+      <span style="font-size:10px;color:#6b7280;">← Terug naar catalogus</span>
+    </div>
+
+    <!-- Two column layout -->
+    <div style="display:grid;grid-template-columns:35% 1fr;gap:24px;padding:12px 20px 20px 20px;font-size:11px;color:#374151;">
+
+      <!-- ===== LEFT COLUMN: Image + Specs ===== -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+
+        <!-- Product image (smaller, 35%) -->
+        <div style="background:#f3f4f6;border-radius:10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;">
+          <div style="text-align:center;color:#9ca3af;">
+            <div style="font-size:32px;margin-bottom:4px;">👔</div>
+            <div style="font-size:10px;">Product Image</div>
+            <div style="font-size:8px;">(35% breedte — zoom = full-size)</div>
+          </div>
+          <button style="position:absolute;bottom:8px;right:8px;background:white;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,0.12);cursor:pointer;">🔍</button>
+        </div>
+
+        <!-- Thumbnail strip -->
+        <div style="display:flex;gap:4px;">
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:2px solid #111827;"></div>
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+        </div>
+
+        <!-- ★ SPECIFICATIONS under image ★ -->
+        <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+            <span style="font-size:11px;font-weight:600;color:#374151;">Specificaties</span>
+          </div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:10px;">
+            <span style="color:#6b7280;">Materiaal</span>
+            <span style="font-weight:500;color:#111827;">65% Polyester / 35% Katoen</span>
+
+            <span style="color:#6b7280;">Stofgewicht</span>
+            <span style="font-weight:500;color:#111827;">300 g/m²</span>
+
+            <span style="color:#6b7280;">Normen</span>
+            <span style="font-weight:500;color:#111827;">EN ISO 20471 Klasse 2</span>
+
+            <span style="color:#6b7280;">Geslacht</span>
+            <span style="font-weight:500;color:#111827;">Heren</span>
+
+            <span style="color:#6b7280;">Wassen</span>
+            <span style="font-weight:500;color:#111827;">60°C wasbaar</span>
+
+            <span style="color:#6b7280;">Herkomst</span>
+            <span style="font-weight:500;color:#111827;">Bangladesh</span>
+
+            <span style="color:#6b7280;border-top:1px solid #f3f4f6;padding-top:4px;">Artikelnr</span>
+            <span style="font-weight:500;color:#111827;border-top:1px solid #f3f4f6;padding-top:4px;">80229</span>
+
+            <span style="color:#6b7280;">Kleuren</span>
+            <span style="font-weight:500;color:#111827;">3</span>
+
+            <span style="color:#6b7280;">Varianten</span>
+            <span style="font-weight:500;color:#111827;">17</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT COLUMN: Header + Description + Matrix ===== -->
+      <div style="display:flex;flex-direction:column;gap:6px;">
+
+        <!-- Breadcrumb -->
+        <nav style="font-size:10px;color:#9ca3af;display:flex;align-items:center;gap:3px;">
+          <span>Werkkleding</span>
+          <span style="color:#d1d5db;">›</span>
+          <span>Broeken</span>
+          <span style="color:#d1d5db;">›</span>
+          <span>Werkbroeken</span>
+        </nav>
+
+        <!-- Brand -->
+        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1.5px;font-weight:500;">HAVEP</div>
+
+        <!-- Model name + badge (badge only when unlocked) -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <h1 style="font-weight:700;font-size:20px;color:#111827;margin:0;line-height:1.2;">Attitude Werkbroek</h1>
+          <span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:2px 8px;border-radius:4px;font-weight:500;border:1px solid #e5e7eb;">Kern</span>
+        </div>
+
+        <!-- Price (only when unlocked) -->
+        <div style="font-weight:600;font-size:16px;color:#111827;">€ 89,95</div>
+
+        <!-- ★ Beheer dropdown (only when unlocked) ★ -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+          <div style="position:relative;display:inline-block;">
+            <button style="display:flex;align-items:center;gap:6px;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;font-size:10px;font-weight:500;color:#374151;background:white;cursor:pointer;">
+              <span style="font-size:11px;">⚙</span> Beheer <span style="font-size:8px;color:#9ca3af;">▾</span>
+            </button>
+            <!-- Dropdown preview (shown inline for mockup) -->
+            <div style="position:absolute;top:100%;left:0;margin-top:4px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);padding:4px;width:200px;z-index:10;">
+              <div style="padding:6px 10px;font-size:10px;color:#374151;border-radius:4px;cursor:pointer;hover:background:#f9fafb;">Status wijzigen</div>
+              <div style="padding:6px 10px;font-size:10px;color:#374151;border-radius:4px;cursor:pointer;">Categorie wijzigen</div>
+              <div style="padding:6px 10px;font-size:10px;color:#374151;border-radius:4px;cursor:pointer;">Naam wijzigen</div>
+              <div style="padding:6px 10px;font-size:10px;color:#374151;border-radius:4px;cursor:pointer;">Omslagfoto wijzigen</div>
+              <div style="border-top:1px solid #e5e7eb;margin:2px 0;"></div>
+              <div style="padding:6px 10px;font-size:10px;color:#374151;border-radius:4px;cursor:pointer;">Verrijk productdata</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ★ Description (inline expandable) ★ -->
+        <div style="margin-top:6px;">
+          <div style="font-size:10px;font-weight:600;color:#374151;margin-bottom:4px;">Productomschrijving</div>
+          <div style="font-size:10px;color:#4b5563;line-height:1.6;position:relative;max-height:48px;overflow:hidden;">
+            Werkbroek met optimale pasvorm en hoog draagcomfort. Voorzien van kniestukken voor kniekussens (EN 14404), meerdere praktische zakken waaronder een losse spijkerzak en telefoonzak. Versterkte naden op kritische punten voor extra duurzaamheid. Geschikt voor industrie en bouw.
+            <div style="position:absolute;bottom:0;left:0;right:0;height:20px;background:linear-gradient(transparent, white);"></div>
+          </div>
+          <button style="border:none;background:none;color:#3b82f6;font-size:9px;padding:0;cursor:pointer;margin-top:2px;font-weight:500;">Meer lezen ▼</button>
+        </div>
+
+        <!-- ★ COLOR/SIZE MATRIX — prominent, main feature ★ -->
+        <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-top:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:10px;">
+            <thead>
+              <tr style="background:#f9fafb;">
+                <th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Kleur</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;min-width:32px;">S</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;min-width:32px;">M</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;min-width:32px;">L</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;min-width:32px;">XL</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;min-width:32px;">XXL</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;min-width:32px;">3XL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Active row (selected color) -->
+              <tr style="background:#f0f4ff;cursor:pointer;">
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#1e3a5f;border:2px solid #111827;box-shadow:0 0 0 2px white, 0 0 0 3.5px #111827;"></span>
+                    <span style="font-weight:600;color:#111827;">Navy</span>
+                  </div>
+                </td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;"><span style="cursor:pointer;color:#111827;">✓</span></td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;">
+                  <span style="background:#111827;color:white;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;">✓</span>
+                </td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;"><span style="cursor:pointer;color:#111827;">✓</span></td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;"><span style="cursor:pointer;color:#111827;">✓</span></td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;"><span style="cursor:pointer;color:#111827;">✓</span></td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;color:#d1d5db;">—</td>
+              </tr>
+              <tr style="cursor:pointer;">
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#111827;border:1px solid #d1d5db;"></span>
+                    <span style="color:#374151;">Zwart</span>
+                  </div>
+                </td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;color:#111827;">✓</td>
+              </tr>
+              <tr style="cursor:pointer;">
+                <td style="padding:8px 12px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg, #ef4444 50%, #111827 50%);border:1px solid #d1d5db;"></span>
+                    <span style="color:#374151;">Rood/Zwart</span>
+                  </div>
+                </td>
+                <td style="padding:8px 6px;text-align:center;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;color:#111827;">✓</td>
+                <td style="padding:8px 6px;text-align:center;color:#d1d5db;">—</td>
+                <td style="padding:8px 6px;text-align:center;color:#d1d5db;">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- EAN Popover example -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <div style="background:#111827;color:white;border-radius:8px;padding:8px 14px;font-size:10px;display:inline-flex;align-items:center;gap:14px;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+            <div>
+              <div style="font-weight:600;">Navy — M</div>
+              <div style="opacity:0.6;font-size:9px;margin-top:1px;">€ 89,95</div>
+            </div>
+            <div style="background:#374151;border-radius:6px;padding:5px 8px;font-family:monospace;font-size:10px;display:flex;align-items:center;gap:5px;">
+              8712345678902
+              <span style="cursor:pointer;color:#60a5fa;font-size:12px;" title="Kopieer EAN">⧉</span>
+            </div>
+          </div>
+          <span style="font-size:8px;color:#9ca3af;">← Popover bij klik op ✓</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Locked state comparison -->
+<div class="mockup" style="margin-top:20px;">
+  <div class="mockup-header">Desktop — Locked (standaard, geen PIN)</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;">
+    <div style="padding:12px 20px 0 20px;">
+      <span style="font-size:10px;color:#6b7280;">← Terug naar catalogus</span>
+    </div>
+    <div style="display:grid;grid-template-columns:35% 1fr;gap:24px;padding:12px 20px 20px 20px;font-size:11px;color:#374151;">
+      <!-- Left -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="background:#f3f4f6;border-radius:10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;">
+          <span style="color:#9ca3af;font-size:10px;">Product Image</span>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:2px solid #111827;"></div>
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+          <div style="width:40px;height:40px;background:#e5e7eb;border-radius:4px;border:1px solid #d1d5db;"></div>
+        </div>
+        <!-- Specs still visible -->
+        <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+            <span style="font-size:11px;font-weight:600;color:#374151;">Specificaties</span>
+          </div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:10px;">
+            <span style="color:#6b7280;">Materiaal</span><span style="font-weight:500;">65% Polyester / 35% Katoen</span>
+            <span style="color:#6b7280;">Normen</span><span style="font-weight:500;">EN ISO 20471</span>
+            <span style="color:#6b7280;">Geslacht</span><span style="font-weight:500;">Heren</span>
+          </div>
+        </div>
+      </div>
+      <!-- Right -->
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <nav style="font-size:10px;color:#9ca3af;">Werkkleding › Broeken › Werkbroeken</nav>
+        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1.5px;font-weight:500;">HAVEP</div>
+        <!-- NO badge, NO price, NO Beheer button -->
+        <h1 style="font-weight:700;font-size:20px;color:#111827;margin:0;">Attitude Werkbroek</h1>
+        <!-- Description -->
+        <div style="margin-top:6px;">
+          <div style="font-size:10px;font-weight:600;color:#374151;margin-bottom:4px;">Productomschrijving</div>
+          <div style="font-size:10px;color:#4b5563;line-height:1.6;">Werkbroek met optimale pasvorm en hoog draagcomfort...</div>
+        </div>
+        <!-- Matrix WITHOUT prices in popover -->
+        <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-top:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:10px;">
+            <thead>
+              <tr style="background:#f9fafb;">
+                <th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Kleur</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;">S</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;">M</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;">L</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:500;color:#6b7280;border-bottom:1px solid #e5e7eb;">XL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background:#f0f4ff;">
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#1e3a5f;border:2px solid #111827;vertical-align:middle;margin-right:6px;box-shadow:0 0 0 2px white, 0 0 0 3.5px #111827;"></span><strong>Navy</strong></td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;">✓</td>
+                <td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e5e7eb;">✓</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 12px;"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#111827;border:1px solid #d1d5db;vertical-align:middle;margin-right:6px;"></span>Zwart</td>
+                <td style="padding:8px 6px;text-align:center;">✓</td>
+                <td style="padding:8px 6px;text-align:center;">✓</td>
+                <td style="padding:8px 6px;text-align:center;">✓</td>
+                <td style="padding:8px 6px;text-align:center;">✓</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size:8px;color:#9ca3af;margin-top:2px;">Klik op ✓ → EAN (zonder prijs bij locked)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Key differences table -->
+<div class="section" style="margin-top:20px;">
+  <h3>Locked vs Unlocked — Verschillen</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
+    <thead>
+      <tr style="border-bottom:2px solid #e5e7eb;">
+        <th style="padding:8px;text-align:left;color:#6b7280;">Element</th>
+        <th style="padding:8px;text-align:center;">🔒 Locked</th>
+        <th style="padding:8px;text-align:center;">🔓 Unlocked</th>
+      </tr>
+    </thead>
+    <tbody style="color:#374151;">
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:6px 8px;">Kern/Rand badge</td>
+        <td style="padding:6px 8px;text-align:center;color:#d1d5db;">Verborgen</td>
+        <td style="padding:6px 8px;text-align:center;color:#059669;">Zichtbaar</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:6px 8px;">Prijzen</td>
+        <td style="padding:6px 8px;text-align:center;color:#d1d5db;">Verborgen</td>
+        <td style="padding:6px 8px;text-align:center;color:#059669;">Zichtbaar (header + popover)</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:6px 8px;">"Beheer" dropdown</td>
+        <td style="padding:6px 8px;text-align:center;color:#d1d5db;">Verborgen</td>
+        <td style="padding:6px 8px;text-align:center;color:#059669;">Zichtbaar</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:6px 8px;">EAN popover prijs</td>
+        <td style="padding:6px 8px;text-align:center;color:#d1d5db;">Alleen EAN</td>
+        <td style="padding:6px 8px;text-align:center;color:#059669;">EAN + prijs</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:6px 8px;">Specificaties</td>
+        <td style="padding:6px 8px;text-align:center;color:#059669;" colspan="2">Altijd zichtbaar</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 8px;">Matrix + beschrijving</td>
+        <td style="padding:6px 8px;text-align:center;color:#059669;" colspan="2">Altijd zichtbaar</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
