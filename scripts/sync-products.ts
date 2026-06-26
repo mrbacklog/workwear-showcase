@@ -1129,8 +1129,10 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Step 1: Check for changes
-  const changeReport = await checkChanges();
+  // Step 1: Check for changes (skip when --force: assume full sync needed)
+  const changeReport: ShowcaseChangeReport = FLAG_FORCE
+    ? { hasChanges: true, dataFingerprint: 'force', lastExportAt: null, changedModelIds: [], changes: { modelsAdded: 0, modelsUpdated: 0, modelsRemoved: 0, imagesChanged: 0, pricesChanged: 0, categoriesChanged: 0 } }
+    : await checkChanges();
 
   // Check if local data exists; if not, force a full sync regardless of change detection
   const metaExists = await fs.access(path.join(DATA_DIR, 'model-cards-meta.json')).then(() => true).catch(() => false);
