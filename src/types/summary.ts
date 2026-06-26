@@ -27,7 +27,7 @@ export interface ModelSummaryColorGroup {
 
 export interface SizeItem {
   value: string;
-  category: 'CONF' | 'SHOE' | 'PANT' | 'NUM' | 'KIDS' | 'UNKNOWN';
+  category: 'CONF' | 'SHOE' | 'PANT' | 'NUM' | 'KIDS' | 'GLOVE' | 'HEAD' | 'BELT' | 'UNI' | 'UNKNOWN';
 }
 
 export interface ModelSummary {

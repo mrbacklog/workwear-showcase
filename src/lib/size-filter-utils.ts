@@ -1,5 +1,6 @@
 'use client';
 
+import { sortByStandard } from '@/lib/size-standards';
 import type { SizeItem } from '@/types/summary';
 
 export type SizeGroup = 'confectie' | 'kledingmaten' | 'schoenmaten' | 'broeksmaten' | 'kindermaten' | 'handschoenmaten' | 'hoofdmaten' | 'riemmaten';
@@ -45,13 +46,7 @@ const CATEGORY_TO_GROUP: Record<string, SizeGroup | null> = {
   BELT:    'riemmaten',
 };
 
-// Sorteervolgorde voor confectie
-const CONFECTIE_ORDER = [
-  'XS', 'S', 'M', 'L', 'L-XL', 'XL', 'XL-XXL', 'XXL', 'XXL-3XL',
-  '3XL', '3XL-4XL', '4XL', '5XL', '6XL',
-];
-
-// Regex patronen voor UNKNOWN-fallback
+// Regex patronen voor UNKNOWN-fallback classificatie
 const CONF_RE = /^(XS|S|M|L|XL|XXL|\d+XL)$/i;
 const COMBINATION_CONF_RE = /^(XS|S|M|L|XL|XXL|\d+XL)-(XS|S|M|L|XL|XXL|\d+XL)$/i;
 const PANT_RE = /^W?\d{2,3}\/L?\d{2,3}$/i;
@@ -74,54 +69,36 @@ function resolveGroup(item: SizeItem): SizeGroup | null {
   return fallbackClassify(item.value);
 }
 
-function sortConfectie(sizes: string[]): string[] {
-  return [...sizes].sort((a, b) => {
-    const ia = CONFECTIE_ORDER.indexOf(a.toUpperCase());
-    const ib = CONFECTIE_ORDER.indexOf(b.toUpperCase());
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-}
-
-function sortKledingmaten(sizes: string[]): string[] {
-  return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-}
-
-function sortSchoenmaten(sizes: string[]): string[] {
-  return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-}
-
-function sortBroeksmaten(sizes: string[]): string[] {
-  return [...sizes].sort((a, b) => {
-    const wa = parseInt(a.replace(/^W?(\d+).*/, '$1'), 10);
-    const wb = parseInt(b.replace(/^W?(\d+).*/, '$1'), 10);
+// Broeksmaten: W oplopend, dan L oplopend — geen vaste standaard
+function sortBroeksmaten(keys: string[]): string[] {
+  return [...keys].sort((a, b) => {
+    const da = displayFromSizeKey(a);
+    const db = displayFromSizeKey(b);
+    const wa = parseInt(da.replace(/^W?(\d+).*/, '$1'), 10);
+    const wb = parseInt(db.replace(/^W?(\d+).*/, '$1'), 10);
     if (wa !== wb) return wa - wb;
-    const la = parseInt(a.replace(/.*\/L?(\d+)$/, '$1'), 10);
-    const lb = parseInt(b.replace(/.*\/L?(\d+)$/, '$1'), 10);
+    const la = parseInt(da.replace(/.*\/L?(\d+)$/, '$1'), 10);
+    const lb = parseInt(db.replace(/.*\/L?(\d+)$/, '$1'), 10);
     return la - lb;
   });
 }
 
-function sortKindermaten(sizes: string[]): string[] {
-  return [...sizes].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-}
-
-function sortNumeric(sizes: string[]): string[] {
-  return [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b));
-}
-
 const SORT_FNS: Record<SizeGroup, (s: string[]) => string[]> = {
-  confectie:       sortConfectie,
-  kledingmaten:    sortKledingmaten,
-  schoenmaten:     sortSchoenmaten,
+  confectie:       sortByStandard,
+  kledingmaten:    sortByStandard,
+  schoenmaten:     sortByStandard,
   broeksmaten:     sortBroeksmaten,
-  kindermaten:     sortKindermaten,
-  handschoenmaten: sortNumeric,
-  hoofdmaten:      sortNumeric,
-  riemmaten:       sortNumeric,
+  kindermaten:     sortByStandard,
+  handschoenmaten: sortByStandard,
+  hoofdmaten:      sortByStandard,
+  riemmaten:       sortByStandard,
 };
+
+// Haal de weergavewaarde op uit een typed filtersleutel ("SHOE:36" → "36")
+export function displayFromSizeKey(key: string): string {
+  const idx = key.indexOf(':');
+  return idx >= 0 ? key.slice(idx + 1) : key;
+}
 
 export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
   const grouped: Record<SizeGroup, Set<string>> = {
@@ -139,7 +116,11 @@ export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
     const items = model.sizeItems ?? (model.sizeSet?.map(v => ({ value: v, category: 'UNKNOWN' as const })) ?? []);
     for (const item of items) {
       const group = resolveGroup(item);
-      if (group) grouped[group].add(item.value);
+      if (!group) continue;
+      // Exclude 4-digit Mascot article codes from schoenmaten (e.g. "0835", "1036")
+      // Half-sizes like "37.5" are kept (contain a dot)
+      if (group === 'schoenmaten' && item.value.length > 2 && !item.value.includes('.')) continue;
+      grouped[group].add(`${item.category}:${item.value}`);
     }
   }
 
@@ -155,7 +136,7 @@ export function buildSizeGroups(models: ModelSummaryLike[]): SizeGroupMap {
   };
 }
 
-// Expandeer combinatiematen: "L-XL" → ["L-XL", "L", "XL"]
+// Expandeer combinatiematen voor filtermatching: "L-XL" → ["L-XL", "L", "XL"]
 export function expandSize(value: string): string[] {
   const match = value.match(/^(.+)-(.+)$/);
   if (match && COMBINATION_CONF_RE.test(value)) {
@@ -169,11 +150,24 @@ export function modelMatchesSizeFilter(
   selected: Set<string>,
 ): boolean {
   if (selected.size === 0) return true;
+
+  // Pre-expand combinatiematen in de selectie: "CONF:L-XL" matcht ook variant "CONF:L"
+  const expandedSelected = new Set<string>();
+  for (const key of selected) {
+    expandedSelected.add(key);
+    const idx = key.indexOf(':');
+    if (idx >= 0) {
+      const cat = key.slice(0, idx);
+      const val = key.slice(idx + 1);
+      for (const exp of expandSize(val)) {
+        expandedSelected.add(`${cat}:${exp}`);
+      }
+    }
+  }
+
   const items = model.sizeItems ?? (model.sizeSet?.map(v => ({ value: v, category: 'UNKNOWN' as const })) ?? []);
   for (const item of items) {
-    for (const expanded of expandSize(item.value)) {
-      if (selected.has(expanded)) return true;
-    }
+    if (expandedSelected.has(`${item.category}:${item.value}`)) return true;
   }
   return false;
 }

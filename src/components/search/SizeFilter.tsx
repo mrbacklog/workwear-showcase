@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { GROUP_ORDER, GROUP_LABELS, type SizeGroupMap, type SizeGroup } from '@/lib/size-filter-utils';
+import { GROUP_ORDER, GROUP_LABELS, displayFromSizeKey, type SizeGroupMap, type SizeGroup } from '@/lib/size-filter-utils';
 
 interface SizeFilterProps {
   available: SizeGroupMap;
@@ -48,13 +48,14 @@ export function SizeFilter({ available, selected, onChange }: SizeFilterProps) {
 
               {/* Scrollable size list */}
               <div className="max-h-28 overflow-y-auto">
-                {sizes.map((size) => {
-                  const isSelected = selected.has(size);
+                {sizes.map((sizeKey) => {
+                  const isSelected = selected.has(sizeKey);
+                  const label = displayFromSizeKey(sizeKey);
                   return (
                     <button
-                      key={size}
+                      key={sizeKey}
                       type="button"
-                      onClick={() => toggle(size)}
+                      onClick={() => toggle(sizeKey)}
                       aria-pressed={isSelected}
                       className={`flex min-h-8 w-full items-center gap-2 px-2 py-1.5 text-left text-sm transition-colors hover:bg-gray-50 ${
                         isSelected ? 'bg-gray-50' : ''
@@ -81,7 +82,7 @@ export function SizeFilter({ available, selected, onChange }: SizeFilterProps) {
                         )}
                       </span>
                       <span className={isSelected ? 'font-medium text-gray-900' : 'text-gray-600'}>
-                        {size}
+                        {label}
                       </span>
                     </button>
                   );

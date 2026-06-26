@@ -21,6 +21,7 @@ import {
   modelMatchesSizeFilter,
   parseSizeParam,
   serializeSizeParam,
+  displayFromSizeKey,
   type SizeGroupMap,
 } from '@/lib/size-filter-utils';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
@@ -760,7 +761,7 @@ function SearchPageContent() {
                     key={size}
                     className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800"
                   >
-                    {size}
+                    {displayFromSizeKey(size)}
                     <button
                       onClick={() => {
                         const next = new Set(selectedSizes);
@@ -768,7 +769,7 @@ function SearchPageContent() {
                         handleSizeToggle(next);
                       }}
                       className="ml-1 text-gray-400 hover:text-gray-600"
-                      aria-label={`Maat ${size} verwijderen`}
+                      aria-label={`Maat ${displayFromSizeKey(size)} verwijderen`}
                     >
                       &#x2715;
                     </button>

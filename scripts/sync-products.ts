@@ -1094,7 +1094,7 @@ function runBuild(): void {
 // ---------------------------------------------------------------------------
 
 function runDeploy(): void {
-  log('Running pre-deploy cleanup (removing RSC .txt payloads)...');
+  log('Running pre-deploy cleanup (RSC .txt payloads + out/images/ local sprites — both served from CDN/R2)...');
   execSync('tsx scripts/pre-deploy-cleanup.ts', {
     cwd: PROJECT_ROOT,
     stdio: 'inherit',

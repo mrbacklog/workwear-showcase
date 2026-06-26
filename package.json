@@ -13,6 +13,7 @@
     "sync:dry-run": "tsx scripts/sync-products.ts --dry-run",
     "sync:deploy": "tsx scripts/sync-products.ts --build --deploy",
     "deploy:pages": "tsx scripts/pre-deploy-cleanup.ts && npx wrangler pages deploy out --project-name=workwear-showcase --branch=main",
+    "deploy:check": "node -e \"const d=require('./out/data/model-summary-core.json');const r=d.filter(m=>m.thumbWebp&&m.thumbWebp.startsWith('/'));console.log(r.length===0?'OK: all thumbWebp are absolute R2 URLs':'FAIL: '+r.length+' relative paths found — run: R2_PUBLIC_URL=https://workwear-images.databiz.app npm run sync:force');process.exit(r.length===0?0:1)\"",
     "fixtures:load": "tsx scripts/load-fixtures.ts",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
