@@ -921,6 +921,7 @@ async function writeDataFiles(
       colorCodeSet: allColorCodes.size > 0 ? Array.from(allColorCodes) : undefined,
       sizeSet: allSizes.size > 0 ? Array.from(allSizes) : undefined,
       sizeItems: sizeItems.length > 0 ? sizeItems : undefined,
+      gender: m.gender ?? null,
     };
   });
   if (cappedModelCount > 0) {
