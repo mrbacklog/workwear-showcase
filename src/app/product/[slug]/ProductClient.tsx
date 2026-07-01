@@ -10,6 +10,7 @@ import { EanPopover } from '@/components/product/EanPopover';
 import { ActionMenu } from '@/components/change-request/ActionMenu';
 import { ChangeRequestModal, WithdrawDialog } from '@/components/change-request/ChangeRequestModal';
 import { ToastContainer } from '@/components/change-request/Toast';
+import { QuoteRequestDialog } from '@/components/product/QuoteRequestDialog';
 import { useModelDetail } from '@/hooks/useModelDetail';
 import { useChangeRequest } from '@/hooks/useChangeRequest';
 import { usePendingRequests } from '@/hooks/usePendingRequests';
@@ -377,6 +378,7 @@ export default function ProductClient() {
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [headerSearch, setHeaderSearch] = useState('');
   const [initialSize, setInitialSize] = useState<string | undefined>(undefined);
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const handleBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -545,6 +547,14 @@ export default function ProductClient() {
               text={model.descriptionNl || model.shortDescriptionNl || null}
             />
 
+            <button
+              type="button"
+              onClick={() => setQuoteOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 transition-colors"
+            >
+              Offerte aanvragen
+            </button>
+
             <ColorSizeMatrix
               colorGroups={model.colorGroups}
               selectedColorIndex={selectedColorIndex}
@@ -593,6 +603,15 @@ export default function ProductClient() {
       />
 
       <ToastContainer toasts={changeRequest.toasts} onDismiss={changeRequest.dismissToast} />
+
+      {model && (
+        <QuoteRequestDialog
+          model={model}
+          initialColorIndex={selectedColorIndex}
+          open={quoteOpen}
+          onClose={() => setQuoteOpen(false)}
+        />
+      )}
     </>
   );
 }
