@@ -8,6 +8,7 @@ import { ColorSwatchStrip } from '@/components/search/ColorSwatchStrip';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { getColorCodes, type ColorFilterGroup } from '@/lib/color-filter-utils';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
+import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
 
 interface ModelCardProps {
   model: ModelSummary;
@@ -47,7 +48,8 @@ function ModelCardInner({ model, preferredColorCodes, colorFilterGroups, viewMod
   const displayGroupIndex = hoveredIndex ?? initialGroupIndex;
   const displayHex = model.colorGroups[displayGroupIndex]?.hexCode ?? '#cccccc';
 
-  const priceText = formatPrice(model.minPrice);
+  const { isUnlocked } = useShowcaseAuth();
+  const priceText = isUnlocked ? formatPrice(model.minPrice) : null;
 
   const linkHref = `/product/${model.slug}/`;
 
