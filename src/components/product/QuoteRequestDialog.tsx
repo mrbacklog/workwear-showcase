@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId } from "react";
+import { useState, useId, useEffect } from "react";
 import type { ShowcaseModel } from "@/types/product";
 
 function IconX() {
@@ -122,6 +122,15 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose }: 
     }
   }
 
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]); // handleClose is stable binnen de render-scope
+
   function handleClose() {
     if (state === "submitting") return;
     setState("idle");
@@ -191,6 +200,97 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose }: 
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-6">
+            {/* Productselectie */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Productselectie</h3>
+              <div className="border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-100">
+                {model.colorGroups.map((cg) => {
+                  const isOpen = expanded.has(cg.colorName);
+                  const colorTotal = cg.variants.reduce(
+                    (s, v) => s + (counts[v.ean] ?? 0),
+                    0
+                  );
+                  return (
+                    <div key={cg.colorName}>
+                      <button
+                        type="button"
+                        onClick={() => toggleColor(cg.colorName)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">{isOpen ? "▼" : "▶"}</span>
+                          {cg.colorName}
+                        </span>
+                        {colorTotal > 0 && (
+                          <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                            {colorTotal} st.
+                          </span>
+                        )}
+                      </button>
+                      {isOpen && (
+                        <div className="px-4 pb-3 pt-1 space-y-1 bg-gray-50">
+                          {cg.variants.map((v) => {
+                            const count = counts[v.ean] ?? 0;
+                            return (
+                              <div
+                                key={v.ean}
+                                className="flex items-center justify-between py-1.5"
+                              >
+                                <span className="text-sm text-gray-700 min-w-[6rem]">
+                                  {v.sizeDisplay}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setCount(v.ean, -1)}
+                                    disabled={count === 0}
+                                    aria-label={`Minder van ${v.sizeDisplay}`}
+                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-bold leading-none"
+                                  >
+                                    −
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={count === 0 ? "" : count}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value, 10);
+                                      const next = isNaN(val) || val < 0 ? 0 : val;
+                                      setCounts((prev) => {
+                                        if (next === 0) {
+                                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                          const { [v.ean]: _removed, ...rest } = prev;
+                                          return rest;
+                                        }
+                                        return { ...prev, [v.ean]: next };
+                                      });
+                                    }}
+                                    aria-label={`Aantal van ${v.sizeDisplay}`}
+                                    className="w-14 text-center text-sm font-semibold tabular-nums border border-gray-300 rounded-md px-1 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setCount(v.ean, 1)}
+                                    aria-label={`Meer van ${v.sizeDisplay}`}
+                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors text-sm font-bold leading-none"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-sm font-medium text-gray-600">
+                Totaal: <span className="text-gray-900">{totaal} stuks</span>
+              </p>
+            </div>
+
             {/* Contactgegevens */}
             <div className="grid grid-cols-1 gap-4">
               <div>
@@ -261,81 +361,6 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose }: 
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Variant selectie */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Productselectie</h3>
-              <div className="border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-100">
-                {model.colorGroups.map((cg) => {
-                  const isOpen = expanded.has(cg.colorName);
-                  const colorTotal = cg.variants.reduce(
-                    (s, v) => s + (counts[v.ean] ?? 0),
-                    0
-                  );
-                  return (
-                    <div key={cg.colorName}>
-                      <button
-                        type="button"
-                        onClick={() => toggleColor(cg.colorName)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-gray-400 text-xs">{isOpen ? "▼" : "▶"}</span>
-                          {cg.colorName}
-                        </span>
-                        {colorTotal > 0 && (
-                          <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                            {colorTotal} st.
-                          </span>
-                        )}
-                      </button>
-                      {isOpen && (
-                        <div className="px-4 pb-3 pt-1 space-y-1 bg-gray-50">
-                          {cg.variants.map((v) => {
-                            const count = counts[v.ean] ?? 0;
-                            return (
-                              <div
-                                key={v.ean}
-                                className="flex items-center justify-between py-1.5"
-                              >
-                                <span className="text-sm text-gray-700 min-w-[6rem]">
-                                  {v.sizeDisplay}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => setCount(v.ean, -1)}
-                                    disabled={count === 0}
-                                    aria-label={`Minder van ${v.sizeDisplay}`}
-                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-bold leading-none"
-                                  >
-                                    −
-                                  </button>
-                                  <span className="w-8 text-center text-sm font-semibold tabular-nums">
-                                    {count}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setCount(v.ean, 1)}
-                                    aria-label={`Meer van ${v.sizeDisplay}`}
-                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors text-sm font-bold leading-none"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-sm font-medium text-gray-600">
-                Totaal: <span className="text-gray-900">{totaal} stuks</span>
-              </p>
             </div>
 
             {/* Bedrukking + opmerkingen */}
