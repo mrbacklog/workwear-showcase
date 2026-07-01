@@ -104,7 +104,6 @@ export function useCategoryTree(): UseCategoryTreeReturn {
       const path: CategoryNode[] = [];
       let current = code;
 
-      // Walk up the tree collecting ancestors
       while (current) {
         const node = lookupRef.current.get(current);
         if (!node) break;

@@ -248,11 +248,11 @@ function SearchPageContent() {
   // ---------------------------------------------------------------------------
 
   const validCodesSet = useMemo(() => {
-    if (!selectedCategory) return null;
+    if (!selectedCategory || tree.length === 0) return null;
     const node = findCategory(selectedCategory);
     if (!node) return null;
     return new Set(getDescendantCodes(node));
-  }, [selectedCategory, findCategory]);
+  }, [selectedCategory, findCategory, tree]);
 
   const filteredResults = useMemo(() => {
     let filtered = results;
