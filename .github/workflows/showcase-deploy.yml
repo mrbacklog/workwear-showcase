@@ -138,16 +138,18 @@ jobs:
         if: steps.check-data.outputs.has_data == 'true'
         run: npm run build
 
+      - name: Pre-deploy cleanup (RSC .txt payloads + lokale sprites)
+        if: steps.check-data.outputs.has_data == 'true'
+        run: npx tsx scripts/pre-deploy-cleanup.ts
+
       - name: Verify file count under Cloudflare limit
         if: steps.check-data.outputs.has_data == 'true'
         run: |
           FILE_COUNT=$(find out -type f | wc -l)
           echo "Total files in out/: $FILE_COUNT"
-          if [ "$FILE_COUNT" -gt 20000 ]; then
-            echo "::error::File count ($FILE_COUNT) exceeds Cloudflare Pages 20K limit — deploy geblokkeerd!"
+          if [ "$FILE_COUNT" -gt 19500 ]; then
+            echo "::error::File count ($FILE_COUNT) nadert de Cloudflare Pages 20K limiet — controleer pre-deploy-cleanup.ts!"
             exit 1
-          elif [ "$FILE_COUNT" -gt 19500 ]; then
-            echo "::warning::File count ($FILE_COUNT) nadert de 20K limiet — opschonen aanbevolen."
           fi
 
       - name: Deploy to Cloudflare Pages
