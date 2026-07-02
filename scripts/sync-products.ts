@@ -1147,7 +1147,11 @@ async function main(): Promise<void> {
     log('No local data found — forcing full sync.');
   }
 
-  const isIncremental = changeReport.changedModelIds.length > 0 && !FLAG_FORCE;
+  // Incrementeel alleen als er lokale chunks zijn om mee te mergen.
+  // Zonder lokale data (bijv. nieuwe GitHub Actions runner) → altijd full export,
+  // anders overschrijven de summary-files de vorige volledige dataset met slechts
+  // de pending wijzigingen en raken core/extended bestanden incompleet.
+  const isIncremental = changeReport.changedModelIds.length > 0 && !FLAG_FORCE && metaExists;
 
   if (changeReport.hasChanges) {
     const c = changeReport.changes;
@@ -1170,8 +1174,9 @@ async function main(): Promise<void> {
   }
 
   // Step 2: Export model data (batched to avoid Cloudflare timeouts)
-  // When --force is set, export ALL eligible models (not just changed ones)
-  const modelIdsToExport = FLAG_FORCE ? [] : changeReport.changedModelIds;
+  // Exporteer ALLE modellen als: --force is gezet OF er geen lokale data is (nieuwe runner).
+  // Incrementele export (alleen gewijzigde IDs) alleen als lokale chunks beschikbaar zijn.
+  const modelIdsToExport = (FLAG_FORCE || !metaExists) ? [] : changeReport.changedModelIds;
   const exportData = await exportModels(modelIdsToExport);
 
   // Step 3: Transform to frontend shape
