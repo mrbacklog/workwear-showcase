@@ -610,6 +610,8 @@ export default function ProductClient() {
           initialColorIndex={selectedColorIndex}
           open={quoteOpen}
           onClose={() => setQuoteOpen(false)}
+          productSlug={slug}
+          productImageUrl={currentImages.find(img => img.isCover)?.thumb400Webp ?? currentImages[0]?.thumb400Webp}
         />
       )}
     </>

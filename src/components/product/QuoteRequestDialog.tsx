@@ -24,12 +24,14 @@ interface Props {
   initialColorIndex: number;
   open: boolean;
   onClose: () => void;
+  productSlug?: string;
+  productImageUrl?: string;
 }
 
 type State = "idle" | "submitting" | "success" | "error";
 type VariantCount = Record<string, number>; // key = ean
 
-export function QuoteRequestDialog({ model, initialColorIndex, open, onClose }: Props) {
+export function QuoteRequestDialog({ model, initialColorIndex, open, onClose, productSlug, productImageUrl }: Props) {
   const formId = useId();
 
   const [naam, setNaam] = useState("");
@@ -96,6 +98,8 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose }: 
       telefoon: telefoon.trim() || null,
       bedrijfsnaam: bedrijfsnaam.trim() || null,
       product_naam: model.modelName,
+      product_slug: productSlug ?? null,
+      product_image_url: productImageUrl ?? null,
       varianten,
       bedrukking,
       opmerkingen: opmerkingen.trim() || null,
