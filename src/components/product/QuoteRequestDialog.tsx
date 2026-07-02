@@ -56,8 +56,7 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose }: 
     setCounts((prev) => {
       const next = (prev[ean] ?? 0) + delta;
       if (next <= 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [ean]: _removed, ...rest } = prev;
+        const { [ean]: _, ...rest } = prev;
         return rest;
       }
       return { ...prev, [ean]: next };
@@ -258,8 +257,7 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose }: 
                                       const next = isNaN(val) || val < 0 ? 0 : val;
                                       setCounts((prev) => {
                                         if (next === 0) {
-                                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                          const { [v.ean]: _removed, ...rest } = prev;
+                                          const { [v.ean]: _, ...rest } = prev;
                                           return rest;
                                         }
                                         return { ...prev, [v.ean]: next };
