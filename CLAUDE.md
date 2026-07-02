@@ -35,13 +35,13 @@ npm run build            # Statische export naar out/
 
 ## Architectuurregels
 
-1. **Geen runtime API calls voor productdata** - Alle productdata komt uit statische JSON bestanden in `public/data/`. Enige runtime API calls zijn voor PIN authenticatie en change requests.
+1. **Geen runtime API calls voor productdata** - Alle productdata komt uit statische JSON bestanden in `public/data/`. Enige runtime API calls zijn voor PIN authenticatie.
 2. **Prijzen in centen** - `priceCents: 8995` = `€ 89,95`. Gebruik `lib/format.ts` voor weergave.
 3. **Model ID = UUID string** - Het `id` veld in FrontendModel is een UUID string, GEEN number.
 4. **Model-cards in chunks** - Gesplitst in ~15MB chunks (Cloudflare 25MB limiet). `model-cards-meta.json` verwijst naar chunks.
 5. **Backend retourneert camelCase** - Pydantic schemas gebruiken `CamelModel`, TypeScript types matchen dit direct.
 6. **Altijd `npm run sync` voor `npm run build`** - Build zonder sync geeft verouderde data.
-7. **Lock/unlock deelt sessie met change requests** - Beide gebruiken `showcase_session` localStorage key.
+7. **Lock/unlock gebruikt `showcase_session`** - PIN-auth slaat de sessie op in `showcase_session` localStorage key.
 
 ## Project structuur
 

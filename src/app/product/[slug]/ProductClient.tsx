@@ -7,18 +7,12 @@ import { Header } from '@/components/layout/Header';
 import { ProductHeader } from '@/components/product/ProductHeader';
 import { ProductSpecs } from '@/components/product/ProductSpecs';
 import { EanPopover } from '@/components/product/EanPopover';
-import { ActionMenu } from '@/components/change-request/ActionMenu';
-import { ChangeRequestModal, WithdrawDialog } from '@/components/change-request/ChangeRequestModal';
-import { ToastContainer } from '@/components/change-request/Toast';
 import { QuoteRequestDialog } from '@/components/product/QuoteRequestDialog';
 import { useModelDetail } from '@/hooks/useModelDetail';
 import { NoImagePlaceholder } from '@/components/ui/NoImagePlaceholder';
-import { useChangeRequest } from '@/hooks/useChangeRequest';
-import { usePendingRequests } from '@/hooks/usePendingRequests';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
 import { useImageUrl } from '@/hooks/useImageUrl';
-import { useEnrichment } from '@/hooks/useEnrichment';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
 import type { ColorGroup, ShowcaseImage, ShowcaseModel, ShowcaseVariant } from '@/types/product';
@@ -385,11 +379,8 @@ export default function ProductClient() {
     }
   }, [router]);
 
-  const pendingRequests = usePendingRequests();
-  const changeRequest = useChangeRequest(pendingRequests);
   const { tree: categoryTree, getCategoryPath } = useCategoryTree();
   const { isUnlocked } = useShowcaseAuth();
-  const enrichment = useEnrichment();
 
   // Build clickable breadcrumb nodes from category tree
   // Depend on categoryTree to recompute when tree data loads asynchronously
@@ -414,13 +405,6 @@ export default function ProductClient() {
     const sizeParam = searchParams.get('size');
     if (sizeParam) setInitialSize(sizeParam);
   }, [model]);
-
-  // Check enrichment status on model load (for authenticated users)
-  useEffect(() => {
-    if (model && isUnlocked) {
-      enrichment.checkStatus(model.id);
-    }
-  }, [model?.id, isUnlocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearchChange = useCallback((value: string) => {
     setHeaderSearch(value);
@@ -489,12 +473,6 @@ export default function ProductClient() {
     );
   }
 
-  const modelId = String(model.id);
-  const pendingReq = pendingRequests.getPending(modelId);
-  const isBusy =
-    changeRequest.status === 'submitting' ||
-    changeRequest.status === 'withdrawing';
-
   return (
     <>
       <Header searchValue={headerSearch} onSearchChange={handleSearchChange} categoryTree={categoryTree} onCategorySelect={handleCategorySelect} />
@@ -529,15 +507,6 @@ export default function ProductClient() {
               showBadge={isUnlocked}
               showPrices={isUnlocked}
               categoryNodes={categoryNodes}
-              actionSlot={isUnlocked ? (
-                <ActionMenu
-                  pendingRequest={pendingReq}
-                  isLoading={isBusy}
-                  enrichmentProposalCount={enrichment.proposals.length}
-                  onSelectAction={(tab) => changeRequest.startChangeRequest(modelId, tab)}
-                  onWithdraw={() => changeRequest.startWithdraw(modelId)}
-                />
-              ) : undefined}
             />
 
             <ExpandableDescription
@@ -567,39 +536,6 @@ export default function ProductClient() {
           </div>
         </div>
       </div>
-
-      {/* Change Request Modal */}
-      <ChangeRequestModal
-        isOpen={changeRequest.status === 'modal_open'}
-        isLoading={changeRequest.status === 'submitting'}
-        model={model}
-        categoryTree={categoryTree}
-        selectedColorGroupIndex={selectedColorIndex}
-        initialTab={changeRequest.initialTab ?? undefined}
-        enrichment={{
-          status: enrichment.status,
-          proposals: enrichment.proposals,
-          notFoundFields: enrichment.notFoundFields,
-          onTrigger: () => enrichment.trigger(modelId),
-          onAcceptField: enrichment.acceptField,
-          onRejectField: enrichment.rejectField,
-          onAcceptImage: enrichment.acceptImage,
-          onRejectImage: enrichment.rejectImage,
-          onBulkAccept: enrichment.bulkAccept,
-        }}
-        onSubmit={changeRequest.submitChangeRequest}
-        onClose={changeRequest.cancel}
-      />
-
-      {/* Withdraw confirmation */}
-      <WithdrawDialog
-        isOpen={changeRequest.status === 'confirm_withdraw'}
-        isLoading={changeRequest.status === 'withdrawing'}
-        onConfirm={changeRequest.confirmWithdraw}
-        onClose={changeRequest.cancel}
-      />
-
-      <ToastContainer toasts={changeRequest.toasts} onDismiss={changeRequest.dismissToast} />
 
       {model && (
         <QuoteRequestDialog

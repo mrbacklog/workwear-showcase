@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { authenticateWithPin } from '@/lib/change-request-api';
+import { authenticateWithPin } from '@/lib/showcase-auth-api';
 
 const SESSION_KEY = 'showcase_session';
 

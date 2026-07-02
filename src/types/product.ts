@@ -162,29 +162,6 @@ export interface CategoryNode {
 }
 
 // ---------------------------------------------------------------------------
-// Change requests
-// ---------------------------------------------------------------------------
-
-export type ChangeType = 'status_change' | 'category_change' | 'name_change' | 'cover_change';
-
-export type ChangeRequestStatus =
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'withdrawn'
-  | 'in_progress'
-  | 'applied'
-  | 'failed';
-
-export interface PendingChangeRequest {
-  id: number;
-  modelId: string;
-  changeType: ChangeType;
-  requestedValue: string;
-  status: ChangeRequestStatus;
-}
-
-// ---------------------------------------------------------------------------
 // Sync manifest
 // ---------------------------------------------------------------------------
 
@@ -201,45 +178,4 @@ export interface SyncManifest {
   totalImages: number;
 }
 
-// ---------------------------------------------------------------------------
-// Enrichment
-// ---------------------------------------------------------------------------
-
-export type EnrichmentStatus = 'none' | 'pending' | 'processing' | 'completed' | 'failed';
-
-export interface FieldProposal {
-  id: string;
-  fieldName: string;
-  currentValue: string | null;
-  proposedValue: string;
-  confidence: number | null;
-  consensusStatus: 'consensus' | 'single_source' | 'conflict';
-  status: 'pending' | 'accepted' | 'rejected';
-}
-
-export interface ImageProposal {
-  id: string;
-  imageUrl: string;
-  shotType: string | null;
-  coverScore: number | null;
-  source: string;
-  resolutionWidth: number | null;
-  resolutionHeight: number | null;
-  status: 'pending' | 'accepted' | 'rejected';
-}
-
-export interface EnrichmentProposal {
-  id: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'partial';
-  createdAt: string | null;
-  fieldProposals: FieldProposal[];
-  imageProposals: ImageProposal[];
-}
-
-export interface EnrichmentStatusResponse {
-  requestId: string | null;
-  status: EnrichmentStatus;
-  proposals: EnrichmentProposal[];
-  notFoundFields: string[];
-}
 
