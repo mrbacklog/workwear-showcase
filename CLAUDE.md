@@ -58,15 +58,13 @@ src/
 │   ├── search/                   # ModelCard, SearchInput, AutoSuggest, filters
 │   ├── category/                 # CategorySidebar, CategoryTreeNode
 │   ├── product/                  # ProductGallery, ColorSizeMatrix, ProductHeader
-│   └── change-request/           # ChangeRequestButton, PinModal
+│   └── change-request/           # PinModal (uitsluitend PIN-auth, geen change-requests meer)
 ├── contexts/
 │   └── ShowcaseAuthContext.tsx    # Lock/unlock state (PIN auth)
 ├── hooks/
 │   ├── useSearch.ts              # MiniSearch wrapper (debounced)
 │   ├── useModelCards.ts          # Chunked model data loader
-│   ├── useCategoryTree.ts        # Categorieboom + breadcrumbs
-│   ├── useChangeRequest.ts       # Change request flow
-│   └── usePendingRequests.ts     # Pending change requests
+│   └── useCategoryTree.ts        # Categorieboom + breadcrumbs
 ├── lib/
 │   ├── search/search-manager.ts  # MiniSearch singleton
 │   ├── format.ts                 # Prijsformattering (centen → EUR)
@@ -104,7 +102,7 @@ De showcase staat standaard **op slot** (alleen Kern-producten, geen prijzen). N
 
 - **PIN:** Via backend endpoint `POST /api/v1/distribution/showcase/auth` → JWT (24h)
 - **Rate limit:** 5 pogingen per 15 minuten per IP
-- **Sessie:** `showcase_session` in localStorage (gedeeld met change requests)
+- **Sessie:** `showcase_session` in localStorage (client-side check, geen backend-validatie voor statische content)
 
 ## CI/CD
 
@@ -120,7 +118,7 @@ GitHub Actions workflow (`.github/workflows/showcase-deploy.yml`):
 BACKEND_URL=https://api.databiz.app
 AGENT_SECRET=<your-agent-secret>
 
-# Runtime API voor change requests
+# Runtime API voor PIN-auth, offerte aanvragen en enrichment-status
 NEXT_PUBLIC_API_URL=https://api.databiz.app
 ```
 

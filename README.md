@@ -70,12 +70,10 @@ public/
 ```
 Workwear PIM (backend) --[API]--> sync-products.ts --> public/data/*.json
                                                    --> public/images/sprites/*.webp
-
-Showcase (frontend)    --[API]--> Change Requests --> Workwear PIM (backend)
 ```
 
-- **Product data** flows from the PIM backend to showcase via the sync script
-- **Change requests** (e.g., promote product to Core) flow from showcase back to the PIM backend
+- **Product data** flows one-way from the PIM backend to showcase via the sync script
+- The showcase is read-only towards the backend: PIN unlock (`/api/v1/distribution/showcase/auth`), the offerte-aanvragen form, and enrichment status are the only runtime calls
 - Data sync runs automatically every 4 hours via GitHub Actions, or manually from the PIM UI
 
 ## Environment Variables
@@ -84,7 +82,7 @@ Showcase (frontend)    --[API]--> Change Requests --> Workwear PIM (backend)
 |----------|-------------|-------------|
 | `BACKEND_URL` | sync | Backend API URL (default: https://api.databiz.app) |
 | `AGENT_SECRET` | sync | API authentication token |
-| `NEXT_PUBLIC_API_URL` | runtime | Backend URL for change requests |
+| `NEXT_PUBLIC_API_URL` | runtime | Backend URL for PIN auth / offerte-aanvragen |
 
 ## Deployment
 
