@@ -407,10 +407,10 @@ export default function ProductClient() {
     const searchParams = new URLSearchParams(window.location.search);
     const colorParam = searchParams.get('color');
     if (colorParam) {
+      const colorLower = colorParam.toLowerCase();
       let idx = model.colorGroups.findIndex((cg) => cg.colorRaw === colorParam);
-      if (idx < 0) {
-        idx = model.colorGroups.findIndex((cg) => cg.colorCode === colorParam);
-      }
+      if (idx < 0) idx = model.colorGroups.findIndex((cg) => cg.colorCode === colorParam);
+      if (idx < 0) idx = model.colorGroups.findIndex((cg) => cg.colorName.toLowerCase() === colorLower);
       if (idx >= 0) setSelectedColorIndex(idx);
     }
     // Read initial size from URL query param (?size=RAW) — applied after color resolves
