@@ -509,20 +509,24 @@ function transformModel(model: ShowcaseModel): FrontendModel {
       sizeCategory: v.sizeCategory ?? null,
       priceCents: v.priceCents ?? 0,
     })),
-    images: cg.images.map((img) => {
-      const r2Key = img.r2Key || `${img.ean}-${img.sequenceNumber}`;
-      return {
-        id: img.id ?? '',
-        ean: img.ean,
-        sequenceNumber: img.sequenceNumber,
-        imageType: img.imageType ?? 'front',
-        path: r2Key,
-        thumbWebp: `${R2_PUBLIC_URL}/80/${r2Key}.webp`,
-        thumb400Webp: `${R2_PUBLIC_URL}/400/${r2Key}.webp`,
-        thumb800Webp: `${R2_PUBLIC_URL}/800/${r2Key}.webp`,
-        isCover: img.isCover ?? false,
-      };
-    }),
+    // Geen fallback op ean-sequenceNumber: dat gokt een R2-pad dat nooit is
+    // geupload (mislukte verwerking) en levert een 404 op. Zonder r2Key: skip.
+    images: cg.images
+      .filter((img) => Boolean(img.r2Key))
+      .map((img) => {
+        const r2Key = img.r2Key!;
+        return {
+          id: img.id ?? '',
+          ean: img.ean,
+          sequenceNumber: img.sequenceNumber,
+          imageType: img.imageType ?? 'front',
+          path: r2Key,
+          thumbWebp: `${R2_PUBLIC_URL}/80/${r2Key}.webp`,
+          thumb400Webp: `${R2_PUBLIC_URL}/400/${r2Key}.webp`,
+          thumb800Webp: `${R2_PUBLIC_URL}/800/${r2Key}.webp`,
+          isCover: img.isCover ?? false,
+        };
+      }),
   }));
 
   // Sort images within each color group so hero (front-view) is always first
@@ -557,6 +561,23 @@ function transformModel(model: ShowcaseModel): FrontendModel {
     modelPublicId: model.model_public_id ?? null,
     colorGroups,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Shared thumbnail selection — cover image first, else colorGroups[0].images[0].
+// Single source of truth so search-index en model-summary nooit uit sync raken.
+// ---------------------------------------------------------------------------
+
+function pickCoverImage(model: FrontendModel): FrontendColorGroup['images'][number] | null {
+  for (const cg of model.colorGroups) {
+    for (const img of cg.images) {
+      if (img.isCover) return img;
+    }
+  }
+  if (model.colorGroups.length > 0 && model.colorGroups[0].images.length > 0) {
+    return model.colorGroups[0].images[0];
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -607,21 +628,11 @@ function buildSearchIndex(models: FrontendModel[]): string {
   });
 
   const documents: SearchDocument[] = models.map((model) => {
-    // Find first thumb WebP URL and full image path key
-    let thumbWebp = '';
-    let imagePath = '';
-    for (const cg of model.colorGroups) {
-      for (const img of cg.images) {
-        if (img.thumb400Webp && !thumbWebp) {
-          thumbWebp = img.thumb400Webp;
-        }
-        if (img.path && !imagePath) {
-          imagePath = img.path;
-        }
-        if (thumbWebp && imagePath) break;
-      }
-      if (thumbWebp && imagePath) break;
-    }
+    // Zelfde selectie als model-summary (cover-first, dan colorGroups[0].images[0]) —
+    // voorkomt dat search-index een ander (mogelijk kapot) beeld toont dan de kaarten.
+    const coverImage = pickCoverImage(model);
+    const thumbWebp = coverImage?.thumb400Webp ?? '';
+    const imagePath = coverImage?.path ?? '';
 
     // Find minimum price
     let minPrice = Infinity;
@@ -842,18 +853,7 @@ async function writeDataFiles(
   let cappedModelCount = 0;
   let totalCappedColorGroups = 0;
   const summaries: ModelSummary[] = models.map((m) => {
-    let thumbWebp = '';
-    outer: for (const cg of m.colorGroups) {
-      for (const img of cg.images) {
-        if (img.isCover) {
-          thumbWebp = img.thumb400Webp;
-          break outer;
-        }
-      }
-    }
-    if (!thumbWebp && m.colorGroups.length > 0 && m.colorGroups[0].images.length > 0) {
-      thumbWebp = m.colorGroups[0].images[0].thumb400Webp;
-    }
+    const thumbWebp = pickCoverImage(m)?.thumb400Webp ?? '';
 
     const prices: number[] = [];
     for (const cg of m.colorGroups) {
