@@ -125,6 +125,14 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose, pr
     }
   }
 
+  // Sync expanded color when initialColorIndex changes while dialog is closed.
+  // Needed because the component mounts (returning null) before the parent's
+  // useEffect([model]) has updated selectedColorIndex from the URL param.
+  useEffect(() => {
+    if (open) return;
+    setExpanded(new Set(initialColorName ? [initialColorName] : []));
+  }, [initialColorIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
