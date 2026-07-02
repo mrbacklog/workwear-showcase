@@ -722,8 +722,13 @@ interface CategoryChunkEntry {
   subChunks?: string[]; // set when category exceeds MAX_CHUNK_BYTES and is split
 }
 
-// Cloudflare Pages hard limit is 25 MB; target well below to leave headroom.
-const MAX_CHUNK_BYTES = 20 * 1024 * 1024; // 20 MB
+// Cloudflare Pages hard limit is 25 MB per file, en 20k bestanden totaal (huidig:
+// ~9.5k, dus ruim marge). Klein gehouden (1 MB) omdat useModelDetail.ts dit hele
+// bestand downloadt om ÉÉN productmodel op te zoeken: bij 20 MB duurde een
+// productpagina 4-8,5s vóórdat er content zichtbaar werd (gemeten 2026-07-03).
+// Bij 1 MB daalt dat naar sub-seconde, tegen een verwaarloosbare toename in
+// bestandsaantal (± 60 extra bestanden i.p.v. duizenden).
+const MAX_CHUNK_BYTES = 1 * 1024 * 1024; // 1 MB
 
 async function writeDataFiles(
   models: FrontendModel[],
