@@ -6,6 +6,7 @@ import type { ModelSummary } from '@/types/summary';
 import { formatPrice } from '@/lib/format';
 import { ColorSwatchStrip } from '@/components/search/ColorSwatchStrip';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { NoImagePlaceholder } from '@/components/ui/NoImagePlaceholder';
 import { getColorCodes, type ColorFilterGroup } from '@/lib/color-filter-utils';
 import type { ViewMode } from '@/components/search/ViewSwitcher';
 import { useShowcaseAuth } from '@/contexts/ShowcaseAuthContext';
@@ -62,9 +63,7 @@ function ModelCardInner({ model, preferredColorCodes, colorFilterGroups, viewMod
       priority={priority}
     />
   ) : (
-    <div className="flex h-full w-full items-center justify-center text-sm text-gray-300">
-      Geen afbeelding
-    </div>
+    <NoImagePlaceholder className="h-full w-full" />
   );
 
   const handleCardLeave = useCallback(() => {

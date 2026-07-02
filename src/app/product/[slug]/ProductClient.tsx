@@ -12,6 +12,7 @@ import { ChangeRequestModal, WithdrawDialog } from '@/components/change-request/
 import { ToastContainer } from '@/components/change-request/Toast';
 import { QuoteRequestDialog } from '@/components/product/QuoteRequestDialog';
 import { useModelDetail } from '@/hooks/useModelDetail';
+import { NoImagePlaceholder } from '@/components/ui/NoImagePlaceholder';
 import { useChangeRequest } from '@/hooks/useChangeRequest';
 import { usePendingRequests } from '@/hooks/usePendingRequests';
 import { useCategoryTree } from '@/hooks/useCategoryTree';
@@ -43,11 +44,7 @@ function ProductGallery({
   }, [selectedIndex]);
 
   if (images.length === 0) {
-    return (
-      <div className="flex aspect-square items-center justify-center rounded-lg bg-gray-50">
-        <span className="text-gray-300">Geen afbeelding</span>
-      </div>
-    );
+    return <NoImagePlaceholder className="aspect-square rounded-lg" />;
   }
 
   const mainImage = images[selectedIndex] ?? images[0];
