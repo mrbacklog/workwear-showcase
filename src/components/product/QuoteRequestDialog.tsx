@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useId, useEffect } from "react";
+import { useState, useId, useEffect, useMemo } from "react";
 import type { ShowcaseModel } from "@/types/product";
+import { compareSizes } from "@/lib/size-sort";
 
 function IconX() {
   return (
@@ -43,7 +44,21 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose, pr
 
   const [counts, setCounts] = useState<VariantCount>({});
 
-  const initialColorName = model.colorGroups[initialColorIndex]?.colorName ?? model.colorGroups[0]?.colorName ?? "";
+  // De maten komen gesorteerd uit de backend, maar dit scherm mag daar niet van
+  // afhangen: het productdetail sorteert zelf ook (ColorSizeMatrix). Zonder deze
+  // sortering stond hier de rauwe exportvolgorde ("XL, S, 5XL, M, 3XL").
+  const colorGroups = useMemo(
+    () =>
+      model.colorGroups.map((cg) => ({
+        ...cg,
+        variants: [...cg.variants].sort((a, b) =>
+          compareSizes(a.sizeDisplay || a.sizeRaw, b.sizeDisplay || b.sizeRaw)
+        ),
+      })),
+    [model.colorGroups]
+  );
+
+  const initialColorName = colorGroups[initialColorIndex]?.colorName ?? colorGroups[0]?.colorName ?? "";
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(initialColorName ? [initialColorName] : [])
   );
@@ -80,7 +95,7 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose, pr
 
     setState("submitting");
 
-    const varianten = model.colorGroups.flatMap((cg) =>
+    const varianten = colorGroups.flatMap((cg) =>
       cg.variants
         .filter((v) => (counts[v.ean] ?? 0) > 0)
         .map((v) => ({
@@ -215,7 +230,7 @@ export function QuoteRequestDialog({ model, initialColorIndex, open, onClose, pr
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Productselectie</h3>
               <div className="border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-100">
-                {model.colorGroups.map((cg) => {
+                {colorGroups.map((cg) => {
                   const isOpen = expanded.has(cg.colorName);
                   const colorTotal = cg.variants.reduce(
                     (s, v) => s + (counts[v.ean] ?? 0),
